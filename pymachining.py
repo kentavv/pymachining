@@ -564,11 +564,39 @@ class MachineType:
     def set_gear_ratio(self, gear_ratio):
         self.gear_ratio = gear_ratio
 
-    def torque_continuous(self, rpm):
+    def _torque_continuous(self, rpm):
         return float('inf')
 
-    def torque_intermittent(self, rpm):
+    def _torque_intermittent(self, rpm):
         return float('inf')
+
+    def torque_continuous(self, rpm):
+        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
+            rpm *= ureg.tpm
+
+        abs_rpm = abs(rpm)
+
+        T = self._torque_continuous(abs_rpm)
+        # T = math.copysign(T, rpm)
+        if rpm < 0:
+            T *= -1
+
+        # T *= self.gear_ratio
+        return T
+
+    def torque_intermittent(self, rpm):
+        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
+            rpm *= ureg.tpm
+
+        abs_rpm = abs(rpm)
+
+        T = self._torque_intermittent(abs_rpm)
+        # T = math.copysign(T, rpm)
+        if rpm < 0:
+            T *= -1
+
+        # T *= self.gear_ratio
+        return T
 
     # In the power methods, if not using Pint.to('watt'), the return value must be converted by dividing by 9.5488
     # Power (W) = Torque (N.m) x Speed (RPM) / 9.5488
@@ -619,8 +647,8 @@ class MachineType:
 
         lns = []
 
-        lns += ax1.plot(x, y1, color=colors[0], label='Continous T')
-        lns += ax2.plot(x, y1 * x / 9.5488, color=colors[1], label='Continous P')
+        lns += ax1.plot(x, y1, color=colors[0], label='Continuous T')
+        lns += ax2.plot(x, y1 * x / 9.5488, color=colors[1], label='Continuous P')
 
         if self.torque_intermittent_define:
             lns += ax1.plot(x, y2, color=colors[2], label='Intermittent T')
@@ -646,7 +674,7 @@ class MachinePM25MV(MachineType):
 
     # I have no information on the actual torque-speed curve; these are guesses.
 
-    def torque_continuous(self, rpm):
+    def _torque_continuous(self, abs_rpm):
         x1, y1 = 0 * ureg.tpm, 0 * (ureg.newton * ureg.meter)
         x2, y2 = 2500 * ureg.tpm / self.gear_ratio, 2.85 * (ureg.newton * ureg.meter) * self.gear_ratio
         dx = x1 - x2
@@ -654,26 +682,15 @@ class MachinePM25MV(MachineType):
         m = dy / dx
         b = y1 - m * x1
 
-        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
-            rpm *= ureg.tpm
-
-        abs_rpm = abs(rpm)
-
         if self.min_rpm / self.gear_ratio <= abs_rpm <= self.max_rpm / self.gear_ratio:
             T = m * abs_rpm + b
         else:
             T = 0 * (ureg.newton * ureg.meter)
 
-        # T = math.copysign(T, rpm)
-        if rpm < 0:
-            T *= -1
-
-        # T *= self.gear_ratio
-
         return T
 
-    def torque_intermittent(self, rpm):
-        return self.torque_continuous(rpm)
+    def _torque_intermittent(self, rpm):
+        return self._torque_continuous(rpm)
 
 
 class MachinePM25MV_DMMServo(MachineType):
@@ -693,7 +710,7 @@ class MachinePM25MV_DMMServo(MachineType):
     # 1.494459493	4969.465649	3.168628417	4979.643766
     # 0.275055405	4989.821883	0.26540261	4979.643766
 
-    def torque_continuous(self, rpm):
+    def _torque_continuous(self, abs_rpm):
         x1, y1 = 2994.910941 * ureg.tpm, 2.592785028 * (ureg.newton * ureg.meter)
         x2, y2 = 4969.465649 * ureg.tpm, 1.494459493 * (ureg.newton * ureg.meter)
         dx = x1 - x2
@@ -701,38 +718,24 @@ class MachinePM25MV_DMMServo(MachineType):
         m = dy / dx
         b = y1 - m * x1
 
-        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
-            rpm *= ureg.tpm
-
-        abs_rpm = abs(rpm)
-
         if 0 * ureg.tpm <= abs_rpm <= 3000 * ureg.tpm:
             T = 2.6 * (ureg.newton * ureg.meter)
         elif 3000 * ureg.tpm < abs_rpm < 5000 * ureg.tpm:
             T = m * abs_rpm + b
-        elif rpm == 5000 * ureg.tpm:
+        elif abs_rpm == 5000 * ureg.tpm:
             T = 1.5 * (ureg.newton * ureg.meter)
         else:
             T = 0 * (ureg.newton * ureg.meter)
 
-        # T = math.copysign(T, rpm)
-        if rpm < 0:
-            T *= -1
-
         return T
 
-    def torque_intermittent(self, rpm):
+    def _torque_intermittent(self, abs_rpm):
         x1, y1 = 3137.40458 * ureg.tpm, 7.160182221 * (ureg.newton * ureg.meter)
         x2, y2 = 4979.643766 * ureg.tpm, 3.168628417 * (ureg.newton * ureg.meter)
         dx = x1 - x2
         dy = y1 - y2
         m = dy / dx
         b = y1 - m * x1
-
-        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
-            rpm *= ureg.tpm
-
-        abs_rpm = abs(rpm)
 
         if 0 * ureg.tpm <= abs_rpm <= 3100 * ureg.tpm:
             T = 7.2 * (ureg.newton * ureg.meter)
@@ -742,9 +745,5 @@ class MachinePM25MV_DMMServo(MachineType):
             T = 3.2 * (ureg.newton * ureg.meter)
         else:
             T = 0
-
-        # T = math.copysign(T, rpm)
-        if rpm < 0:
-            T *= -1
 
         return T
