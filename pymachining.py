@@ -2,6 +2,9 @@ import pint
 import math
 
 ureg = pint.UnitRegistry(auto_reduce_dimensions=True)
+# ureg.rpm is already defined as [revolution/minute] = [2Pi turn/minute]
+# To avoid a lot of error prone scaling by 2Pi, define ureg.tpm as [1 turn/minute]
+ureg.tpm = ureg.turn / ureg.min
 
 
 def MaterialUnknown(Exception):
@@ -544,3 +547,106 @@ class DrillOp:
     #
     # print((1 * (ureg.turn / ureg.min)) * (1 * (ureg.mm / ureg.turn)))
     # 1 millimeter / minute
+
+
+class MachineType:
+    def __init__(self):
+        self.max_rpm = float('inf')
+        self.min_rpm = float('inf')
+
+    def torque_continuous(self, rpm):
+        return float('inf')
+
+    def torque_intermittent(self, rpm):
+        return float('inf')
+
+    # In the power methods, if not using Pint.to('watt'), the return value must be converted by dividing by 9.5488
+    # Power (W) = Torque (N.m) x Speed (RPM) / 9.5488
+
+    def power_continuous(self, rpm):
+        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
+            rpm *= ureg.tpm
+
+        t = self.torque_continuous(rpm)
+        # return t * rpm
+        # return t * rpm / 9.5488)
+        return (t * rpm).to('watt')
+
+    def power_intermittent(self, rpm):
+        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
+            rpm *= ureg.tpm
+
+        t = self.torque_intermittent(rpm)
+        # return t * rpm
+        # return t * rpm / 9.5488)
+        return (t * rpm).to('watt')
+
+
+class MachinePM25MV_DMMServo(MachineType):
+    def __init__(self):
+        self.max_rpm = 5000 * (ureg.turn / ureg.min)
+        self.min_rpm = 0 * (ureg.turn / ureg.min)
+
+    # A - Continuous duty		B - Intermittent duty
+    # Y	X	Y	X
+    # Torque [N m]	Motor speed [min^-1]	Torque [N m]	Motor speed [min^-1]
+    # 2.599975376	22.90076336	7.167741935	12.72264631
+    # 2.592785028	2994.910941	7.160182221	3137.40458
+    # 1.494459493	4969.465649	3.168628417	4979.643766
+    # 0.275055405	4989.821883	0.26540261	4979.643766
+
+    def torque_continuous(self, rpm):
+        x1, y1 = 2994.910941 * ureg.tpm, 2.592785028 * (ureg.newton * ureg.meter)
+        x2, y2 = 4969.465649 * ureg.tpm, 1.494459493 * (ureg.newton * ureg.meter)
+        dx = x1 - x2
+        dy = y1 - y2
+        m = dy / dx
+        b = y1 - m * x1
+
+        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
+            rpm *= ureg.tpm
+
+        abs_rpm = abs(rpm)
+
+        if 0 * ureg.tpm <= abs_rpm <= 3000 * ureg.tpm:
+            T = 2.6 * (ureg.newton * ureg.meter)
+        elif 3000 * ureg.tpm < abs_rpm < 5000 * ureg.tpm:
+            T = m * abs_rpm + b
+        elif rpm == 5000 * ureg.tpm:
+            T = 1.5 * (ureg.newton * ureg.meter)
+        else:
+            T = 0 * (ureg.newton * ureg.meter)
+
+        # T = math.copysign(T, rpm)
+        if rpm < 0:
+            T *= -1
+
+        return T
+
+    def torque_intermittent(self, rpm):
+        x1, y1 = 3137.40458 * ureg.tpm, 7.160182221 * (ureg.newton * ureg.meter)
+        x2, y2 = 4979.643766 * ureg.tpm, 3.168628417 * (ureg.newton * ureg.meter)
+        dx = x1 - x2
+        dy = y1 - y2
+        m = dy / dx
+        b = y1 - m * x1
+
+        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
+            rpm *= ureg.tpm
+
+        abs_rpm = abs(rpm)
+
+        if 0 * ureg.tpm <= abs_rpm <= 3100 * ureg.tpm:
+            T = 7.2 * (ureg.newton * ureg.meter)
+        elif 3100 * ureg.tpm < abs_rpm < 5000 * ureg.tpm:
+            T = m * abs_rpm + b
+        elif abs_rpm == 5000 * ureg.tpm:
+            T = 3.2 * (ureg.newton * ureg.meter)
+        else:
+            T = 0
+
+        # T = math.copysign(T, rpm)
+        if rpm < 0:
+            T *= -1
+
+        return T
