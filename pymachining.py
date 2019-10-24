@@ -1,6 +1,9 @@
 import pint
 import math
 
+import pylab
+import numpy as np
+
 ureg = pint.UnitRegistry(auto_reduce_dimensions=True)
 # ureg.rpm is already defined as [revolution/minute] = [2Pi turn/minute]
 # To avoid a lot of error prone scaling by 2Pi, define ureg.tpm as [1 turn/minute]
@@ -553,6 +556,13 @@ class MachineType:
     def __init__(self):
         self.max_rpm = float('inf')
         self.min_rpm = float('inf')
+        self.gear_ratio = 1
+        self.name = 'Unknown'
+        self.description = 'Unknown'
+        self.torque_intermittent_define = False
+
+    def set_gear_ratio(self, gear_ratio):
+        self.gear_ratio = gear_ratio
 
     def torque_continuous(self, rpm):
         return float('inf')
@@ -581,11 +591,99 @@ class MachineType:
         # return t * rpm / 9.5488)
         return (t * rpm).to('watt')
 
+    def plot_torque_speed_curve(self):
+        import pylab
+        import numpy as np
+
+        x = np.linspace(self.min_rpm, self.max_rpm / self.gear_ratio, 100) * ureg.tpm
+
+        # y1 = np.vectorize(m.torque_continuous)(x)
+        # y2 = np.vectorize(m.torque_intermittent)(x)
+        # y1 = [m.torque_continuous(x_) for x_ in x]
+        # y2 = [m.torque_intermittent(x_) for x_ in x]
+        y1 = np.array([self.torque_continuous(x_).magnitude for x_ in x]) * (ureg.newton * ureg.meter)
+        y2 = np.array([self.torque_intermittent(x_).magnitude for x_ in x]) * (ureg.newton * ureg.meter)
+
+        fig, ax1 = pylab.subplots()
+
+        ax1.set_title(self.name + " Torque, Power vs. Speed", fontsize=16.)
+
+        ax1.set_xlabel("Speed [RPM]", fontsize=12)
+        ax1.set_ylabel("Torque [N m]", fontsize=12)
+        ax1.set_xlim([x[0].magnitude, x[-1].magnitude])
+
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Power [W]", fontsize=12)
+
+        colors = ['#ff0000ee', '#773300ee', '#00ff00ee', '#005533ee']
+
+        lns = []
+
+        lns += ax1.plot(x, y1, color=colors[0], label='Continous T')
+        lns += ax2.plot(x, y1 * x / 9.5488, color=colors[1], label='Continous P')
+
+        if self.torque_intermittent_define:
+            lns += ax1.plot(x, y2, color=colors[2], label='Intermittent T')
+            lns += ax2.plot(x, y2 * x / 9.5488, color=colors[3], label='Intermittent P')
+
+        ax1.set_ylim(bottom=0)
+        ax2.set_ylim(bottom=0)
+
+        labs = [l.get_label() for l in lns]
+        ax1.legend(lns, labs, loc='upper left')
+
+        fig.tight_layout()
+        pylab.show()
+
+
+class MachinePM25MV(MachineType):
+    def __init__(self):
+        MachineType.__init__(self)
+        self.max_rpm = 2500 * (ureg.turn / ureg.min)
+        self.min_rpm = 0 * (ureg.turn / ureg.min)
+        self.name = 'PM25MV'
+        self.description = 'PM25MV milling machine'
+
+    # I have no information on the actual torque-speed curve; these are guesses.
+
+    def torque_continuous(self, rpm):
+        x1, y1 = 0 * ureg.tpm, 0 * (ureg.newton * ureg.meter)
+        x2, y2 = 2500 * ureg.tpm / self.gear_ratio, 2.85 * (ureg.newton * ureg.meter) * self.gear_ratio
+        dx = x1 - x2
+        dy = y1 - y2
+        m = dy / dx
+        b = y1 - m * x1
+
+        if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
+            rpm *= ureg.tpm
+
+        abs_rpm = abs(rpm)
+
+        if self.min_rpm / self.gear_ratio <= abs_rpm <= self.max_rpm / self.gear_ratio:
+            T = m * abs_rpm + b
+        else:
+            T = 0 * (ureg.newton * ureg.meter)
+
+        # T = math.copysign(T, rpm)
+        if rpm < 0:
+            T *= -1
+
+        # T *= self.gear_ratio
+
+        return T
+
+    def torque_intermittent(self, rpm):
+        return self.torque_continuous(rpm)
+
 
 class MachinePM25MV_DMMServo(MachineType):
     def __init__(self):
+        MachineType.__init__(self)
         self.max_rpm = 5000 * (ureg.turn / ureg.min)
         self.min_rpm = 0 * (ureg.turn / ureg.min)
+        self.name = 'PM25MV_DMMServo'
+        self.description = 'PM25MV milling machine with DMM 86M Servo'
+        self.torque_intermittent_define = True
 
     # A - Continuous duty		B - Intermittent duty
     # Y	X	Y	X
