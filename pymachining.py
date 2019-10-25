@@ -27,11 +27,87 @@ class MaterialType:
         self.specific_cutting_force = float('inf')
         self.specific_cutting_energy = float('inf')
 
+    def sfm(self):
+        return float('inf')
+
+    def sfm_(self):
+        v = float('inf')
+
+        # Ranges from http://www.norsemandrill.com/feeds-speeds-drill.php
+
+        if isinstance(self.tool_material, ToolMaterialHSS):
+            material = ''
+
+            # Recommended Speeds for Standard Materials with H.S.S. Drills
+            if isinstance(self.material, MaterialAluminum) or material == 'aluminum':
+                # Aluminum and its Alloys
+                sfm_range = [200, 300]
+            elif material in ['brass', 'bronze']:
+                # Brass and Bronze (Ordinary)
+                sfm_range = [150, 300]
+            elif material == 'bronze_high_tensile':
+                # Bronze (High Tensile)
+                sfm_range = [70, 150]
+            elif material == 'die_casting_zinc_base':
+                # Die Casting (Zinc Base)
+                sfm_range = [300, 400]
+            elif material == 'iron_cast_soft':
+                # Iron-Cast (Soft)
+                sfm_range = [75, 125]
+            elif material == 'iron_cast_medium_hard':
+                # Iron-Cast (Medium Hard)
+                sfm_range = [50, 100]
+            elif material == 'iron_cast_hard_chilled':
+                # Iron-Cast (Hard Chilled)
+                sfm_range = [10, 20]
+            elif material == 'iron_cast_malleable':
+                # Iron-Cast (Malleable)
+                sfm_range = [80, 90]
+            elif material == 'magnesium':
+                # Magnesium and its Alloys
+                sfm_range = [250, 400]
+            elif material in ['monel_metal', 'high-nickel_steel', 'stainless_steel']:
+                # Monel Metal or High-Nickel Steel, Stainless Steel
+                sfm_range = [30, 50]
+            elif material in ['plastics']:
+                # Plastics or Similar Materials
+                sfm_range = [100, 300]
+            elif material in ['steel_mild']:
+                # Steel - Mild .2 carbon to .3 carbon
+                sfm_range = [80, 110]
+            elif material in ['steel']:
+                # Steel - Steel .4 carbon to .5 carbon
+                sfm_range = [70, 80]
+            elif material in ['steel_tool']:
+                # Steel - Tool 1.2 carbon
+                sfm_range = [50, 60]
+            elif material in ['steel_forgings']:
+                # Steel - Forgings
+                sfm_range = [40, 50]
+            elif material in ['steel_alloy']:
+                # Steel - Alloy - 300 to 400 Brinell
+                sfm_range = [20, 30]
+
+            v = sfm_range[0]
+
+        return v
+
+    def speed(self):
+        return self.sfm().to('mm * turn / minute')
+
 
 class MaterialAluminum(MaterialType):
     def __init__(self):
         self.specific_cutting_force = float('inf')
         self.specific_cutting_energy = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
+
+    def sfm(self):
+        # Aluminum and its Alloys
+        sfm_range = [200, 300]
+        v = (sfm_range[0] + sfm_range[1]) / 2.
+        v *= ureg.feet * ureg.tpm
+        # v.ito('feet * turn / minute')
+        return v
 
 
 def ToolMaterialUnknown(Exception):
@@ -80,6 +156,12 @@ class Tool:
 
     def speed(self):
         pass
+
+    def feed_rate(self):
+        return float('inf')
+
+    def sfm(self):
+        return float('inf')
 
 
 class Drill(Tool):
@@ -135,12 +217,12 @@ class Drill(Tool):
                 # print(coef, residuals[0])
                 ipr = poly.polyval(diam, coef)
             else:
-                for i in range(len(diam_in)-1):
+                for i in range(len(diam_in) - 1):
                     # print(i, diam_in[i], diam_in[i+1])
-                    if diam_in[i] <= diam <= diam_in[i+1]:
+                    if diam_in[i] <= diam <= diam_in[i + 1]:
                         x = diam
-                        x1, x2 = diam_in[i:i+2]
-                        y1, y2 = feed_ipr[i:i+2]
+                        x1, x2 = diam_in[i:i + 2]
+                        y1, y2 = feed_ipr[i:i + 2]
                         y = (x - x1) / (x2 - x1) * (y2 - y1) + y1
                         ipr = y
                         break
@@ -347,10 +429,10 @@ class Drill(Tool):
 
 
 class DrillOp:
-    @ureg.check(None, '[length]')
-    def __init__(self, diameter, material):
-        self.cutter_diameter = diameter
-        self.material = material
+    def __init__(self, drill, stock_material):
+        self.cutter_diameter = drill.diameter
+        self.drill = drill
+        self.stock_material = stock_material
 
     @staticmethod
     @ureg.check('[length]', 'turn / [time]')
@@ -862,6 +944,40 @@ class DrillOp:
     #
     # print((1 * (ureg.turn / ureg.min)) * (1 * (ureg.mm / ureg.turn)))
     # 1 millimeter / minute
+
+    @staticmethod
+    @ureg.check('[length]', 'turn / [time]')
+    def speed_(cutter_diameter, rpm):
+        v = cutter_diameter * rpm * math.pi
+        assert (v.check('[length] / [time]'))
+        return v
+
+    @ureg.check(None, 'turn / [time]')
+    def speed(self, rpm):
+        return self.speed_(self.cutter_diameter, rpm)
+
+    @staticmethod
+    @ureg.check('[length]', 'turn / [time]')
+    def sfm_(cutter_diameter, rpm):
+        v = DrillOp.speed_(cutter_diameter, rpm)
+        assert (v.check('[length] / [time]'))
+        v.ito('feet * turn / minute')
+        return v
+
+    @ureg.check(None, 'turn / [time]')
+    def sfm(self, rpm):
+        return self.sfm_(self.cutter_diameter, rpm)
+
+    @staticmethod
+    @ureg.check('[length]', '[length] * turn / [time]')
+    def rrpm_(cutter_diameter, speed):
+        rpm = speed / (cutter_diameter * math.pi)
+        assert (rpm.check('turn / [time]'))
+        return rpm
+
+    @ureg.check(None, '[length] * turn / [time]')
+    def rrpm(self, speed):
+        return self.rrpm_(self.cutter_diameter, speed)
 
 
 class MachineType:
