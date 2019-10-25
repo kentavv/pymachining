@@ -102,6 +102,12 @@ class MaterialType:
 class MaterialAluminum(MaterialType):
     def __init__(self):
         self.specific_cutting_force = float('inf')
+
+        # The way units are written in text may not be the way they should be written in code.
+        # book:spec
+        # v = .065 * (ureg.kilowatt / ureg.cm**3 / ureg.min)
+        # code:
+        # v = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
         self.specific_cutting_energy = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
 
     def sfm(self):
@@ -110,14 +116,6 @@ class MaterialAluminum(MaterialType):
         v = (sfm_range[0] + sfm_range[1]) / 2.
         v *= ureg.feet * ureg.tpm
         # v.ito('feet * turn / minute')
-        return v
-
-    def specific_cutting_energy(self):
-        # Be careful with expressing units, the way they are written in text may not be the way they should be written in code
-        # v = .065 * (ureg.kilowatt / ureg.cm**3 / ureg.min)
-        # print(v)
-        v = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
-        # print(v)
         return v
 
 
@@ -156,90 +154,33 @@ class ToolMaterialCarbide(ToolMaterialType):
 
 
 class Tool:
-    def __init__(self, diameter, tool_material, stock_material):
+    def __init__(self, diameter, tool_material):
         self.diameter = diameter
         self.tool_material = tool_material
-        self.stock_material = stock_material
         pass
 
-    def feed(self):
+    def feed(self, stock_material):
         pass
 
-    def speed(self):
+    def speed(self, stock_material):
         pass
 
-    def feed_rate(self):
+    def feed_rate(self, stock_material):
         return float('inf')
 
-    def sfm(self):
+    def sfm(self, stock_material):
         return float('inf')
+
+    @classmethod
+    def plot_feedrate(cls, stock_material):
+        pass
 
 
 class Drill(Tool):
-    def __init__(self, diameter, tool_material, stock_material):
-        Tool.__init__(self, diameter, tool_material, stock_material)
+    def __init__(self, diameter, tool_material):
+        Tool.__init__(self, diameter, tool_material)
         if diameter in self.letters_and_numbers_and_fractions:
             self.diameter = self.letters_and_numbers_and_fractions[diameter][1] * ureg.mm
-
-    # The drill sets that I have are:
-    # Precision Twist Drill C252A 1-13MX.5M PTD BRT MET JOBBER DR SET
-    #  1 to 13mm, 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set - General Purpose, Standard Point, Straight Shank
-    #  DIN338, 4xD, 118°
-    #  Style: 2A    7.2:98I, 7.3:89H
-    # Precision Twist Drill C29R10P 1/16-1/2X64THS PTD BRT JOBBER DRILL SET
-    #  1/16 to 1/2", 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set - General Purpose, Standard Point, Straight Shank, Series R10P
-    #  Style: R10P  7.2:98I, 7.3:89H
-    # Precision Twist Drill C60R18P #1-#60 W/CS PTD BRT JOBBER DRILL SET
-    #  #60 to 1, 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set - General Purpose, Standard Point, Straight Shank, Series R18P
-    #  Style: R18P  7.2:98I, 7.3:89H
-    # Precision Twist Drill C26R15P A-Z W/CS PTD HSS JOBBER DRILL SET
-    #  A to Z, 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set - General Purpose, Standard Point, Straight Shank, Series R15P
-    #  Style: R15P  7.2:98I, 7.3:89H
-
-    # 7.2 Al alloyed, Si<0.5% 6061 T6, 7075, 314-340 <150 HB N 1
-    # 7.3 Al alloyed, Si>0.5%<10% 6061 T6, 380-390 <120 HB N 1
-    # Feed in Inches per Revolution (IPR) ± 25% Ø Diameter
-    # 1mm,1/32”  2mm,3/32”    3mm,1/8”    4mm,5/32”   5mm,3/16”   6mm,1/4”    8mm,5/16”   10mm,3/8”   12mm,1/2”   15mm,9/16”  16mm,5/8”   20mm,3/4”   25mm,1” 30mm,1.1/8” 40mm,1.5/8” 50mm,2”
-    # H 0.0008 0.0026 0.0040 0.0046 0.0051 0.0059 0.0075 0.0090 0.0096 0.0107 0.0110 0.0126 0.0140 0.0148 0.0157 0.0165
-    # I 0.0008 0.0030 0.0047 0.0053 0.0059 0.0068 0.0087 0.0104 0.0110 0.0122 0.0126 0.0142 0.0157 0.0165 0.0173 0.0181
-
-    def feed_rate(self, fit=True):
-        diam = self.diameter
-
-        diam_mm = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 25, 30, 40, 50]
-        diam_str = ['1/32"', '3/32"', '1/8"', '5/32"', '3/16"', '1/4"', '5/16"', '3/8"', '1/2"', '9/16"', '5/8"',
-                    '3/4"', '1"', '1.1/8"', '1.5/8"', '2"']
-        diam_in = [1 / 32., 3 / 32., 1 / 8., 5 / 32., 3 / 16., 1 / 4., 5 / 16., 3 / 8., 1 / 2., 9 / 16., 5 / 8., 3 / 4.,
-                   1., 1 + 1 / 8., 1 + 5 / 8., 2.]
-        feed_ipr = [0.0008, 0.0030, 0.0047, 0.0053, 0.0059, 0.0068, 0.0087, 0.0104, 0.0110, 0.0122, 0.0126, 0.0142,
-                    0.0157, 0.0165, 0.0173, 0.0181]
-
-        # print(diam_in)
-        ipr = None
-        if diam < diam_in[0]:
-            ipr = feed_ipr[0]
-        elif diam >= diam_in[-1]:
-            ipr = feed_ipr[-1]
-        else:
-            if fit:
-                import numpy.polynomial.polynomial as poly
-                deg = 4
-                coef, (residuals, rank, singular_values, rcond) = poly.polyfit(diam_in, feed_ipr, deg, full=True)
-                # print(coef, residuals[0])
-                ipr = poly.polyval(diam, coef)
-            else:
-                for i in range(len(diam_in) - 1):
-                    # print(i, diam_in[i], diam_in[i+1])
-                    if diam_in[i] <= diam <= diam_in[i + 1]:
-                        x = diam
-                        x1, x2 = diam_in[i:i + 2]
-                        y1, y2 = feed_ipr[i:i + 2]
-                        y = (x - x1) / (x2 - x1) * (y2 - y1) + y1
-                        ipr = y
-                        break
-        return ipr
-
-    # https://www.dormerpramet.com/Downloads/RoundTool_Speeds_and_Feeds.pdf
 
     # Table values from https://en.wikipedia.org/wiki/Drill_bit_sizes
     letters_and_numbers_and_fractions = {'#104': [0.0031, 0.079],
@@ -439,11 +380,161 @@ class Drill(Tool):
                                          }
 
 
-class DrillOp:
-    def __init__(self, drill, stock_material):
-        self.cutter_diameter = drill.diameter
-        self.drill = drill
+class DrillHSS(Drill):
+    def __init__(self, diameter):
+        Drill.__init__(self, diameter, ToolMaterialHSS())
+
+    def feed_rate(self, stock_material, fit=True):
+        # https://www.dormerpramet.com/Downloads/RoundTool_Speeds_and_Feeds.pdf
+
+        # The drill sets that I have are:
+
+        # Jobber length:
+        #     Precision Twist Drill C252A 1-13MX.5M PTD BRT MET JOBBER DR SET
+        #         1 to 13mm, 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set
+        #         General Purpose, Standard Point, Straight Shank
+        #         DIN338, 4xD, 118°
+        #         Style: 2A    7.2:98I, 7.3:89H
+        #     Precision Twist Drill C29R10P 1/16-1/2X64THS PTD BRT JOBBER DRILL SET
+        #         1/16 to 1/2", 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set
+        #         General Purpose, Standard Point, Straight Shank, Series R10P
+        #         ANSI, 4xD, 118°
+        #         Style: R10P  7.2:98I, 7.3:89H
+        #     Precision Twist Drill C60R18P #1-#60 W/CS PTD BRT JOBBER DRILL SET
+        #         #60 to 1, 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set
+        #         General Purpose, Standard Point, Straight Shank, Series R18P
+        #         ANSI, 4xD, 118°
+        #         Style: R18P  7.2:98I, 7.3:89H
+        #     Precision Twist Drill C26R15P A-Z W/CS PTD HSS JOBBER DRILL SET
+        #         A to Z, 118° Point, Bright Finish High Speed Steel Jobber Length Drill Bit Set
+        #         General Purpose, Standard Point, Straight Shank, Series R15P
+        #         ANSI, 4xD, 118°
+        #         Style: R15P  7.2:98I, 7.3:89H
+        #
+        # Screw-machine length
+        #     Precision Twist Drill C29R40 1/16-1/2X64THS PTD BRT SCREW MACH DR SET
+        #         1/16 to 1/2", 118° Point, Bright Finish, High Speed Steel Screw Machine Length Drill Bit Set
+        #         29 Piece, Standard Point, Straight Shank, Series R40
+        #         ANSI, 2.5xD, 118°
+        #         Style: R40  7.2:98J, 7.3:98I
+        #     Precision Twist Drill C26R42 A-Z W/CS PTD BRT SCREW MACH DR SET
+        #         118° Point, Bright Finish, High Speed Steel Screw Machine Length Drill Bit Set
+        #         26 Piece, Standard Point, Straight Shank, Series R42
+        #         ANSI, 2.5xD, 118°
+        #         Style: R42  7.2:98J, 7.3:98I
+        #     Precision Twist Drill C60R41 #1-#60 W/CS PTD BRT SCREW MACH DR SET
+        #         118° Point, Bright Finish, High Speed Steel Screw Machine Length Drill Bit Set
+        #         60 Piece, Standard Point, Straight Shank, Series R41
+        #         ANSI, 2.5xD, 118°
+        #         Style: R41  7.2:98J, 7.3:98I
+
+        # Application Material Groups (AMG), Hardness HRC, ISO
+        # 7.2 Al alloyed, Si<0.5% 6061 T6, 7075, 314-340 <150 HB N 1
+        # 7.3 Al alloyed, Si>0.5%<10% 6061 T6, 380-390 <120 HB N 1
+
+        # Feed in Inches per Revolution (IPR) ± 25% Ø Diameter
+        # 1mm,1/32”  2mm,3/32”    3mm,1/8”    4mm,5/32”   5mm,3/16”   6mm,1/4”    8mm,5/16”   10mm,3/8”   12mm,1/2”   15mm,9/16”  16mm,5/8”   20mm,3/4”   25mm,1” 30mm,1.1/8” 40mm,1.5/8” 50mm,2”
+        # A 0.0004 0.0009 0.0011 0.0013 0.0014 0.0017 0.0021 0.0024 0.0027 0.0032 0.0034 0.0043 0.0049 0.0053 0.0061 0.0069
+        # B 0.0006 0.0011 0.0015 0.0016 0.0018 0.0021 0.0026 0.0031 0.0035 0.0041 0.0043 0.0053 0.0060 0.0065 0.0074 0.0082
+        # C 0.0006 0.0013 0.0017 0.0020 0.0022 0.0025 0.0031 0.0039 0.0043 0.0049 0.0051 0.0063 0.0071 0.0077 0.0087 0.0094
+        # D 0.0006 0.0015 0.0021 0.0024 0.0027 0.0031 0.0039 0.0047 0.0051 0.0059 0.0061 0.0074 0.0083 0.0090 0.0100 0.0108
+        # E 0.0007 0.0017 0.0024 0.0028 0.0031 0.0037 0.0045 0.0055 0.0059 0.0068 0.0071 0.0085 0.0094 0.0102 0.0112 0.0122
+        # F 0.0007 0.0020 0.0029 0.0033 0.0037 0.0043 0.0054 0.0065 0.0070 0.0080 0.0083 0.0098 0.0108 0.0116 0.0126 0.0135
+        # G 0.0007 0.0022 0.0033 0.0038 0.0043 0.0050 0.0063 0.0075 0.0081 0.0091 0.0094 0.0110 0.0122 0.0130 0.0140 0.0148
+        # H 0.0008 0.0026 0.0040 0.0046 0.0051 0.0059 0.0075 0.0090 0.0096 0.0107 0.0110 0.0126 0.0140 0.0148 0.0157 0.0165
+        # I 0.0008 0.0030 0.0047 0.0053 0.0059 0.0068 0.0087 0.0104 0.0110 0.0122 0.0126 0.0142 0.0157 0.0165 0.0173 0.0181
+        # J 0.0009 0.0033 0.0053 0.0060 0.0067 0.0078 0.0098 0.0117 0.0124 0.0137 0.0142 0.0159 0.0175 0.0183 0.0191 0.0198
+        # K 0.0010 0.0036 0.0059 0.0067 0.0075 0.0087 0.0110 0.0130 0.0138 0.0153 0.0157 0.0177 0.0193 0.0201 0.0209 0.0215
+        # L 0.0011 0.0040 0.0065 0.0073 0.0082 0.0094 0.0120 0.0142 0.0152 0.0165 0.0169 0.0191 0.0207 0.0215 0.0224 0.0231
+        # M 0.0012 0.0043 0.0071 0.0080 0.0089 0.0102 0.0130 0.0154 0.0165 0.0177 0.0181 0.0205 0.0220 0.0228 0.0238 0.0248
+        # N 0.0013 0.0047 0.0077 0.0086 0.0095 0.0110 0.0140 0.0165 0.0179 0.0189 0.0193 0.0219 0.0234 0.0242 0.0253 0.0265
+        # S 0.0003 0.0006 0.0008 0.0010 0.0012 0.0015 0.0020 0.0031 0.0039 0.0048 0.0051 0.0059 0.0070 0.0070 0.0090
+        # T 0.0006 0.0011 0.0016 0.0020 0.0024 0.0028 0.0035 0.0043 0.0051 0.0063 0.0067 0.0075 0.0080 0.0090 0.0100
+        # U 0.0010 0.0019 0.0028 0.0031 0.0035 0.0042 0.0055 0.0067 0.0079 0.0088 0.0091 0.0094 0.0110 0.0120 0.0140
+        # V 0.0015 0.0027 0.0039 0.0045 0.0051 0.0060 0.0079 0.0098 0.0110 0.0122 0.0126 0.0134 0.0160 0.0170 0.0200
+        # W 0.0019 0.0035 0.0051 0.0059 0.0067 0.0079 0.0102 0.0130 0.0150 0.0165 0.0169 0.0177 0.0190 0.0190 0.0200
+        # X 0.0022 0.0041 0.0059 0.0071 0.0083 0.0098 0.0130 0.0165 0.0189 0.0210 0.0217 0.0228
+        # Y 0.0027 0.0049 0.0071 0.0087 0.0102 0.0125 0.0169 0.0217 0.0276 0.0276 0.0276 0.0291
+        # Z 0.0037 0.0068 0.0098 0.0128 0.0157 0.0210 0.0315 0.0394 0.0433 0.0463 0.0472 0.0472
+
+        diam = self.diameter
+
+        diam_mm = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 25, 30, 40, 50]
+        diam_str = ['1/32"', '3/32"', '1/8"', '5/32"', '3/16"', '1/4"', '5/16"', '3/8"', '1/2"', '9/16"', '5/8"',
+                    '3/4"', '1"', '1.1/8"', '1.5/8"', '2"']
+        diam_in_ = [1 / 32., 3 / 32., 1 / 8., 5 / 32., 3 / 16., 1 / 4., 5 / 16., 3 / 8., 1 / 2., 9 / 16., 5 / 8.,
+                    3 / 4.,
+                    1., 1 + 1 / 8., 1 + 5 / 8., 2.]
+        feed_ipr_h_ = [0.0008, 0.0026, 0.0040, 0.0046, 0.0051, 0.0059, 0.0075, 0.0090, 0.0096, 0.0107, 0.0110, 0.0126,
+                       0.0140, 0.0148, 0.0157, 0.0165]
+        feed_ipr_i_ = [0.0008, 0.0030, 0.0047, 0.0053, 0.0059, 0.0068, 0.0087, 0.0104, 0.0110, 0.0122, 0.0126, 0.0142,
+                       0.0157, 0.0165, 0.0173, 0.0181]
+        feed_ipr_j_ = [0.0009, 0.0033, 0.0053, 0.0060, 0.0067, 0.0078, 0.0098, 0.0117, 0.0124, 0.0137, 0.0142, 0.0159,
+                       0.0175, 0.0183, 0.0191, 0.0198]
+        feed_ipr_ = feed_ipr_i_
+
+        diam_in = [x * ureg.inch for x in diam_in_]
+        feed_ipr = [x * (ureg.inch / ureg.turn) for x in feed_ipr_]
+
+        # print(diam_in)
+        ipr = None
+        if diam < diam_in[0]:
+            ipr = feed_ipr[0]
+        elif diam >= diam_in[-1]:
+            ipr = feed_ipr[-1]
+        else:
+            if fit:
+                import numpy.polynomial.polynomial as poly
+                deg = 4
+                coef, (residuals, rank, singular_values, rcond) = poly.polyfit(diam_in_, feed_ipr_, deg, full=True)
+                # print(coef, residuals[0])
+                # Convert to inches, which are the units of the regressed source data. Then select magnitude of
+                # measurement, else the calculated values will be in terms of [inch]^rank, the rank of the
+                # fitted polynomial. Finally, add units in/turn to calculated ipr value.
+                ipr = poly.polyval(diam.to('inch').magnitude, coef)
+                ipr *= (ureg.inch / ureg.turn)
+            else:
+                for i in range(len(diam_in) - 1):
+                    # print(i, diam_in[i], diam_in[i+1])
+                    if diam_in[i] <= diam <= diam_in[i + 1]:
+                        x = diam
+                        x1, x2 = diam_in[i:i + 2]
+                        y1, y2 = feed_ipr[i:i + 2]
+                        y = (x - x1) / (x2 - x1) * (y2 - y1) + y1
+                        ipr = y
+                        break
+        return ipr
+
+    @classmethod
+    def plot_feedrate(cls, stock_material):
+        x = np.linspace(0, 2.5, 100) * ureg.inch
+
+        def f(diam, fit):
+            d = cls(diam)
+            v = d.feed_rate(stock_material, fit)
+            return v
+
+        y1 = [f(x_, False).magnitude for x_ in x]
+        y2 = [f(x_, True).magnitude for x_ in x]
+        pylab.xlabel('drill size [in]')
+        pylab.ylabel('feed rate [in / rev]')
+        pylab.xlim(0, 2.5)
+        pylab.plot(x, y1, label='linear regression')
+        pylab.plot(x, y2, label='polynomial regression')
+        pylab.legend()
+        pylab.show()
+
+
+class MachiningOp:
+    def __init__(self, tool, stock_material):
+        self.tool = tool
         self.stock_material = stock_material
+
+
+class DrillOp(MachiningOp):
+    def __init__(self, drill, stock_material):
+        MachiningOp.__init__(self, drill, stock_material)
+        self.cutter_diameter = drill.diameter
 
     @staticmethod
     @ureg.check('[length]', 'turn / [time]')
@@ -901,7 +992,7 @@ class DrillOp:
         1.6467993070668676 kilowatt
         """
         return self.net_power_(self.cutter_diameter, feed_per_revolution, spindle_rpm,
-                               self.stock_material.specific_cutting_energy())
+                               self.stock_material.specific_cutting_energy)
 
     def torque(self, net_power, spindle_speed):
         return self.torque_(net_power, spindle_speed)
@@ -1059,7 +1150,7 @@ class MachineType:
         # return t * rpm / 9.5488)
         return (t * rpm).to('watt')
 
-    def plot_torque_speed_curve(self):
+    def plot_torque_speed_curve(self, highlight_power=None, highlight_torque=None, highlight_rpm=None):
         import pylab
         import numpy as np
 
@@ -1083,7 +1174,8 @@ class MachineType:
         ax2 = ax1.twinx()
         ax2.set_ylabel("Power [W]", fontsize=12)
 
-        colors = ['#ff0000ee', '#773300ee', '#00ff00ee', '#005533ee']
+        colors = ['#ff0000ee', '#773300ee', '#00ff00ee', '#005533ee',
+                  '#555533ee', '#22ff22ee', '#ff5533ee']
 
         lns = []
 
@@ -1093,6 +1185,15 @@ class MachineType:
         if self.torque_intermittent_define:
             lns += ax1.plot(x, y2, color=colors[2], label='Intermittent T')
             lns += ax2.plot(x, y2 * x / 9.5488, color=colors[3], label='Intermittent P')
+
+        if highlight_power is not None:
+            lns += [ax2.axhline(highlight_power.to('watt').magnitude, color=colors[4], label='Requested P')]
+
+        if highlight_torque is not None:
+            lns += [ax2.axhline(highlight_rpm.magnitude, color=colors[5], label='Requested T')]
+
+        if highlight_rpm is not None:
+            lns += [ax2.axvline(highlight_rpm.magnitude, color=colors[6], label='Requested RPM')]
 
         ax1.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
