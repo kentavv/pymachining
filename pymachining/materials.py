@@ -41,7 +41,10 @@ class MaterialAluminum(MaterialType):
         # v = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
         self.specific_cutting_energy = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
 
-    def sfm(self, tool_material=ToolMaterialHSS):
+    def sfm(self, tool_material=None):
+        if tool_material is None:
+            tool_material = ToolMaterialHSS()
+
         # Aluminum and its Alloys
         if isinstance(tool_material, ToolMaterialHSS):
             sfm_range = [200, 300]

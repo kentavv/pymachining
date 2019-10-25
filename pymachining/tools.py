@@ -2,6 +2,7 @@ import numpy as np
 import pylab
 
 from pymachining.units import *
+from pymachining.tool_materials import *
 
 
 class Tool:
