@@ -122,12 +122,32 @@ class MachineType:
         fig.tight_layout()
         pylab.show()
 
+    def clamp_speed(self, rpm):
+        adjusted = False
+        if rpm < self.min_rpm:
+            rpm = self.min_rpm
+            adjusted = True
+        elif rpm > self.max_rpm:
+            rpm = self.max_rpm
+            adjusted = True
+        return rpm, adjusted
 
-class MachinePM25MV(MachineType):
+
+class MillingMachine(MachineType):
     def __init__(self):
         MachineType.__init__(self)
+
+
+class VerticalMillingMachine(MillingMachine):
+    def __init__(self):
+        MillingMachine.__init__(self)
+
+
+class MachinePM25MV(VerticalMillingMachine):
+    def __init__(self):
+        VerticalMillingMachine.__init__(self)
         self.max_rpm = 2500 * (ureg.turn / ureg.min)
-        self.min_rpm = 0 * (ureg.turn / ureg.min)
+        self.min_rpm = 100 * (ureg.turn / ureg.min)
         self.name = 'PM25MV'
         self.description = 'PM25MV milling machine'
 
@@ -152,11 +172,11 @@ class MachinePM25MV(MachineType):
         return self._torque_continuous(rpm)
 
 
-class MachinePM25MV_DMMServo(MachineType):
+class MachinePM25MV_DMMServo(VerticalMillingMachine):
     def __init__(self):
-        MachineType.__init__(self)
+        VerticalMillingMachine.__init__(self)
         self.max_rpm = 5000 * (ureg.turn / ureg.min)
-        self.min_rpm = 0 * (ureg.turn / ureg.min)
+        self.min_rpm = 10 * (ureg.turn / ureg.min)
         self.name = 'PM25MV_DMMServo'
         self.description = 'PM25MV milling machine with DMM 86M Servo'
         self.torque_intermittent_define = True
@@ -203,6 +223,6 @@ class MachinePM25MV_DMMServo(MachineType):
         elif abs_rpm == 5000 * ureg.tpm:
             T = 3.2 * (ureg.newton * ureg.meter)
         else:
-            T = 0
+            T = 0 * (ureg.newton * ureg.meter)
 
         return T
