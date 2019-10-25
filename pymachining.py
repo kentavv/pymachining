@@ -95,6 +95,9 @@ class MaterialType:
     def speed(self):
         return self.sfm().to('mm * turn / minute')
 
+    def specific_cutting_energy(self):
+        return float('inf')
+
 
 class MaterialAluminum(MaterialType):
     def __init__(self):
@@ -107,6 +110,14 @@ class MaterialAluminum(MaterialType):
         v = (sfm_range[0] + sfm_range[1]) / 2.
         v *= ureg.feet * ureg.tpm
         # v.ito('feet * turn / minute')
+        return v
+
+    def specific_cutting_energy(self):
+        # Be careful with expressing units, the way they are written in text may not be the way they should be written in code
+        # v = .065 * (ureg.kilowatt / ureg.cm**3 / ureg.min)
+        # print(v)
+        v = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
+        # print(v)
         return v
 
 
@@ -867,8 +878,8 @@ class DrillOp:
         """
         return self.net_power__(self.cutter_diameter, feed_per_revolution, cutting_speed, specific_cutting_force)
 
-    @ureg.check(None, '[length] / turn', 'turn / [time]', '[power] / ([volume] / [time])')
-    def net_power(self, feed_per_revolution, spindle_rpm, specific_cutting_energy):
+    @ureg.check(None, '[length] / turn', 'turn / [time]')
+    def net_power(self, feed_per_revolution, spindle_rpm):
         """
 
         :param cutter_diameter:
@@ -889,7 +900,8 @@ class DrillOp:
         >>> print(P)
         1.6467993070668676 kilowatt
         """
-        return self.net_power_(self.cutter_diameter, feed_per_revolution, spindle_rpm, specific_cutting_energy)
+        return self.net_power_(self.cutter_diameter, feed_per_revolution, spindle_rpm,
+                               self.stock_material.specific_cutting_energy())
 
     def torque(self, net_power, spindle_speed):
         return self.torque_(net_power, spindle_speed)
