@@ -11,6 +11,7 @@ class MachineType:
         self.torque_intermittent_define = False
         self.idle_power = 0. * ureg.watt  # tare power
         self.efficiency = 1.
+        self.max_feed_force = 0 * ureg.lbs
 
     def set_gear_ratio(self, gear_ratio):
         self.gear_ratio = gear_ratio
@@ -134,6 +135,16 @@ class MachineType:
             adjusted = True
         return rpm, adjusted
 
+    def clamp_thrust(self, thrust):
+        adjusted = False
+        if thrust < 0:
+            thrust = 0
+            adjusted = True
+        elif thrust > self.max_feed_force:
+            thrust = self.max_feed_force
+            adjusted = True
+        return thrust, adjusted
+
 
 class LatheMachine(MachineType):
     def __init__(self):
@@ -163,6 +174,7 @@ class MachinePM25MV(VerticalMillingMachine):
         self.min_rpm = 100 * (ureg.turn / ureg.min)
         self.name = 'PM25MV'
         self.description = 'PM25MV milling machine'
+        self.max_feed_force = 100 * ureg.lbs
 
     # I have no information on the actual torque-speed curve; these are guesses.
 
@@ -193,6 +205,7 @@ class MachinePM25MV_DMMServo(VerticalMillingMachine):
         self.name = 'PM25MV_DMMServo'
         self.description = 'PM25MV milling machine with DMM 86M Servo'
         self.torque_intermittent_define = True
+        self.max_feed_force = 100 * ureg.lbs
 
     # A - Continuous duty		B - Intermittent duty
     # Y	X	Y	X
