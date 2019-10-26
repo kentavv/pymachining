@@ -33,6 +33,8 @@ def test_drilling_range():
     ax = []
     ay1 = []
     ay2 = []
+    ay3 = []
+    ay4 = []
     for diam in np.linspace(1 / 64., 1., 100):
         cutter_diameter = diam * ureg.inch
 
@@ -50,10 +52,11 @@ def test_drilling_range():
         p_c = m.power_continuous(spindle_rpm).to('watt')
         p_i = m.power_intermittent(spindle_rpm).to('watt')
         P = drill_op.net_power(feed_per_revolution, spindle_rpm).to('watt')
+        t = drill.thrust(stock_material)
 
-        row = [cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P]
+        row = [cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P, t]
         if do_once:
-            print('[cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P]')
+            print('[cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P, feed_force]')
             print(' '.join(f'[{x.units}]' for x in row))
             do_once = False
         print(' '.join(f'{x.magnitude:.4f}' for x in row))
@@ -64,6 +67,8 @@ def test_drilling_range():
         ax += [diam]
         ay1 += [spindle_rpm.magnitude]
         ay2 += [feed_per_revolution.magnitude]
+        ay3 += [P.magnitude]
+        ay4 += [p_c.magnitude]
 
     pylab.plot(x, y1, label='Requested power')
     pylab.plot(x, y2, label='Available power')
@@ -74,7 +79,7 @@ def test_drilling_range():
     pylab.show()
 
     fig, ax1 = pylab.subplots()
-    ax1.set_title('Drilling Speeds-Feeds Demands', fontsize=16.)
+    ax1.set_title('Drilling Speeds-Feeds-Power Demands', fontsize=16.)
     ax1.set_xlabel('Drill diameter [inch]', fontsize=12)
     ax1.set_ylabel("Speed [rpm]", fontsize=12)
     ax1.set_xlim([ax[0], ax[-1]])
@@ -84,15 +89,32 @@ def test_drilling_range():
     ax2.set_ylabel("Feed [ipr]", fontsize=12)
     ax3.set_ylabel("Power [watt]", fontsize=12)
 
+    def make_patch_spines_invisible(ax):
+        ax.set_frame_on(True)
+        ax.patch.set_visible(False)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+
+    ax3.spines["right"].set_position(("axes", 1.2))
+    make_patch_spines_invisible(ax3)
+    ax3.spines["right"].set_visible(True)
+
     colors = ['#ff0000ee', '#773300ee', '#00ff00ee', '#005533ee',
               '#555533ee', '#22ff22ee', '#ff5533ee']
 
     lns = []
     lns += ax1.plot(ax, ay1, color=colors[0], label='Speed')
     lns += ax2.plot(ax, ay2, color=colors[1], label='Feed')
+    lns += ax3.plot(ax, ay3, color=colors[2], label='Power requested')
+    lns += ax3.plot(ax, ay4, color=colors[3], label='Power available')
+
+    # ax1.yaxis.label.set_color(lns[0][0].get_color())
+    # ax2.yaxis.label.set_color(lns[0][0].get_color())
+    # ax2.yaxis.label.set_color(lns[0][0].get_color())
 
     ax1.set_ylim(bottom=0)
     ax2.set_ylim(bottom=0)
+    ax3.set_ylim(bottom=0)
 
     labs = [l.get_label() for l in lns]
     ax1.legend(lns, labs, loc='upper left')
