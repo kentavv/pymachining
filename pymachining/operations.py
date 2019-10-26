@@ -10,6 +10,22 @@ class MachiningOp:
 
 
 class DrillOp(MachiningOp):
+    # Notes
+    # The power required to drill stock is proportional to the metal removal rate (MRR).
+    # Other than spindle horsepower, axial thrust may be a limiting factor.
+    # Spindle speed is calculated using SFM and the drill diameter. However, only the
+    # outer surface of the drill is traveling this fast, and the angular velocity goes to 0
+    # at the center of the drill bit.
+    # If insufficient power is available, then one can step drill. Again, the power required
+    # for each step is proportional to the MRR of each step. A reasonable selection of pilot
+    # drill would be one with a slightly larger diameter than the web of the desired drill bit.
+    # Might even consider annular cutters for large thru-holes, which will produce the hole
+    # by creating a disk instead of a pile of chips. Annular cutters are generally an 1-2" in
+    # length and have four flats on their shank. There are R8 and straight shank annular cutter
+    # holders, at least one with thru-coolant.
+    # Hard to beat a drill bit for metal removal rate, but when not practical, helical milling
+    # may be the only option.
+
     def __init__(self, drill, stock_material):
         MachiningOp.__init__(self, drill, stock_material)
         self.cutter_diameter = drill.diameter
