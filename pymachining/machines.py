@@ -205,7 +205,22 @@ class MachinePM25MV_DMMServo(VerticalMillingMachine):
         self.name = 'PM25MV_DMMServo'
         self.description = 'PM25MV milling machine with DMM 86M Servo'
         self.torque_intermittent_define = True
-        self.max_feed_force = 100 * ureg.lbs
+        # 300 lbs is the measured force, but the scale limit may have been exceeded.
+        # The speed-torque curve of the Leadshine ES-32320-S Easy Servo Motor shows
+        # the motor produces 1.8 Nm up to 360 RPM (with default holding current percentage
+        # of 40%; increasing this percentage improves torque at higher RPMs).
+        # David Clements' PM25-CNC kit uses 5mm pitch (5.08 TPI) ballscrews.
+        # Converting the torque to a linear force:
+        # F = T * 2Pi * (gear ratio) * (%eff) / (lead pitch)
+        #
+        # >>> ((1.8 * ureg.newton * ureg.meter) * 2 * math.pi * 1 * .95 / (5*ureg.mm))
+        # 2148.8493750554185 <Unit('newton')>
+        # >>> ((1.8 * ureg.newton * ureg.meter) * 2 * math.pi * 1 * .95 / (5*ureg.mm)).to('lbf')
+        # 483.080556886682 <Unit('force_pound')>
+        #
+        # Measured using a Taylor 5559 BIA scale. Could not find a manual for specifications,
+        # but Amazon description says "Accurate to 300 lbs" and "330 lb capacity reading to the 0.2 lb."
+        self.max_feed_force = 300 * ureg.lbs
 
     # A - Continuous duty		B - Intermittent duty
     # Y	X	Y	X
