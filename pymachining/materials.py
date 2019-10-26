@@ -35,11 +35,14 @@ class MaterialAluminum(MaterialType):
         self.specific_cutting_force = float('inf')
 
         # The way units are written in text may not be the way they should be written in code.
+        # From Metal Cutting Theory and Practice, Table 2.1
         # book:spec
         # v = .065 * (ureg.kilowatt / ureg.cm**3 / ureg.min)
         # code:
         # v = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
-        self.specific_cutting_energy = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
+        specific_cutting_energy = [0.012, 0.022]
+        self.specific_cutting_energy = (specific_cutting_energy[0] + specific_cutting_energy[1]) / 2. * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
+        self.specific_cutting_energy = specific_cutting_energy[0] * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
 
     def sfm(self, tool_material=None):
         if tool_material is None:
@@ -49,6 +52,7 @@ class MaterialAluminum(MaterialType):
         if isinstance(tool_material, ToolMaterialHSS):
             sfm_range = [200, 300]
         v = (sfm_range[0] + sfm_range[1]) / 2.
+        v = sfm_range[0]
         v *= ureg.feet * ureg.tpm
         # v.ito('feet * turn / minute')
         return v
