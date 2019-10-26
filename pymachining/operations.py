@@ -214,8 +214,7 @@ class DrillOp(MachiningOp):
         D_c = cutter_diameter
 
         f_r = f * N  # feed_rate [mm / min]
-        # The /4 comes from r^2 = (d/2)^2
-        Q = (math.pi * D_c ** 2 / 4) * f_r
+        Q = (math.pi * (D_c / 2.) ** 2) * f_r
 
         #     Q *= ureg.turn
         #     print(Q)
