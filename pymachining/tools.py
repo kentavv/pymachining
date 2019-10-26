@@ -441,7 +441,7 @@ class DrillHSS(Drill):
         return feed_force
 
     @classmethod
-    def plot_thrust(cls, stock_material):
+    def plot_thrust(cls, stock_material, highlight=None):
         x = np.linspace(0, 2.5, 100) * ureg.inch
 
         def f(diam, fit):
@@ -465,5 +465,7 @@ class DrillHSS(Drill):
         pylab.plot(x, y1, label='linear regression')
         pylab.plot(x, y2, label='polynomial regression')
         pylab.plot(x, y3, label='calculated estimate')
+        if highlight is not None:
+            pylab.axhline(y=highlight.to('lbs').magnitude, label='max thrust')
         pylab.legend()
         pylab.show()
