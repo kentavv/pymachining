@@ -8,8 +8,6 @@ from pymachining import ureg
 
 def test_drilling_range():
     stock_material = pm.Material('aluminum')
-    pm.DrillHSS.plot_feedrate(stock_material)
-    pm.DrillHSS.plot_thrust(stock_material)
 
     cutter_diameter = 12.7 * ureg.mm
     drill = pm.DrillHSS(cutter_diameter)
@@ -25,6 +23,9 @@ def test_drilling_range():
 
     m = pm.MachinePM25MV_DMMServo()
     m.plot_torque_speed_curve(highlight_power=P, highlight_rpm=spindle_rpm)
+
+    pm.DrillHSS.plot_feedrate(stock_material)
+    pm.DrillHSS.plot_thrust(stock_material, highlight=m.max_feed_force)
 
     do_once = True
     x = []
