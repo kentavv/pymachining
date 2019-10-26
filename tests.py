@@ -1,5 +1,7 @@
 import numpy as np
 
+import pylab
+
 import pymachining as pm
 from pymachining import ureg
 
@@ -25,7 +27,13 @@ def test_drilling_range():
     m.plot_torque_speed_curve(highlight_power=P, highlight_rpm=spindle_rpm)
 
     do_once = True
-    for diam in np.linspace(1 / 64., .5, 50):
+    x = []
+    y1 = []
+    y2 = []
+    ax = []
+    ay1 = []
+    ay2 = []
+    for diam in np.linspace(1 / 64., 1., 100):
         cutter_diameter = diam * ureg.inch
 
         drill = pm.DrillHSS(cutter_diameter)
@@ -50,6 +58,52 @@ def test_drilling_range():
             do_once = False
         print(' '.join(f'{x.magnitude:.4f}' for x in row))
 
+        x += [diam]
+        y1 += [P.magnitude]
+        y2 += [p_c.magnitude]
+        ax += [diam]
+        ay1 += [spindle_rpm.magnitude]
+        ay2 += [feed_per_revolution.magnitude]
+
+    pylab.plot(x, y1, label='Requested power')
+    pylab.plot(x, y2, label='Available power')
+    pylab.title('Drilling Power Demands')
+    pylab.xlabel('Drill diameter [inch]')
+    pylab.ylabel('Power [watt]')
+    pylab.legend()
+    pylab.show()
+
+    fig, ax1 = pylab.subplots()
+    ax1.set_title('Drilling Speeds-Feeds Demands', fontsize=16.)
+    ax1.set_xlabel('Drill diameter [inch]', fontsize=12)
+    ax1.set_ylabel("Speed [rpm]", fontsize=12)
+    ax1.set_xlim([ax[0], ax[-1]])
+
+    ax2 = ax1.twinx()
+    ax3 = ax1.twinx()
+    ax2.set_ylabel("Feed [ipr]", fontsize=12)
+    ax3.set_ylabel("Power [watt]", fontsize=12)
+
+    colors = ['#ff0000ee', '#773300ee', '#00ff00ee', '#005533ee',
+              '#555533ee', '#22ff22ee', '#ff5533ee']
+
+    lns = []
+    lns += ax1.plot(ax, ay1, color=colors[0], label='Speed')
+    lns += ax2.plot(ax, ay2, color=colors[1], label='Feed')
+
+    ax1.set_ylim(bottom=0)
+    ax2.set_ylim(bottom=0)
+
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc='upper left')
+
+    fig.tight_layout()
+    pylab.show()
+
+
+
+    # pylab.legend()
+    # pylab.show()
 
 def main():
     test_drilling_range()
