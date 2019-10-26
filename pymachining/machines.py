@@ -9,9 +9,9 @@ class MachineType:
         self.name = 'Unknown'
         self.description = 'Unknown'
         self.torque_intermittent_define = False
-        self.idle_power = 0. * ureg.watt  # tare power
+        self.idle_power = Q_(0., 'watt')  # tare power
         self.efficiency = 1.
-        self.max_feed_force = 0 * ureg.lbs
+        self.max_feed_force = Q_(0, 'lbs')
 
     def set_gear_ratio(self, gear_ratio):
         self.gear_ratio = gear_ratio
@@ -170,17 +170,17 @@ class VerticalMillingMachine(MillingMachine):
 class MachinePM25MV(VerticalMillingMachine):
     def __init__(self):
         VerticalMillingMachine.__init__(self)
-        self.max_rpm = 2500 * (ureg.turn / ureg.min)
-        self.min_rpm = 100 * (ureg.turn / ureg.min)
+        self.max_rpm = Q_(2500, 'turn / min')
+        self.min_rpm = Q_(100, 'turn / min')
         self.name = 'PM25MV'
         self.description = 'PM25MV milling machine'
-        self.max_feed_force = 100 * ureg.lbs
+        self.max_feed_force = Q_(100, 'lbs')
 
     # I have no information on the actual torque-speed curve; these are guesses.
 
     def _torque_continuous(self, abs_rpm):
-        x1, y1 = 0 * ureg.tpm, 0 * (ureg.newton * ureg.meter)
-        x2, y2 = 2500 * ureg.tpm / self.gear_ratio, 2.85 * (ureg.newton * ureg.meter) * self.gear_ratio
+        x1, y1 = Q_(0, 'tpm'), Q_(0., 'newton meter')
+        x2, y2 = Q_(2500, 'tpm') / self.gear_ratio, Q_(2.85, 'newton meter') * self.gear_ratio
         dx = x1 - x2
         dy = y1 - y2
         m = dy / dx
@@ -189,7 +189,7 @@ class MachinePM25MV(VerticalMillingMachine):
         if self.min_rpm / self.gear_ratio <= abs_rpm <= self.max_rpm / self.gear_ratio:
             T = m * abs_rpm + b
         else:
-            T = 0 * (ureg.newton * ureg.meter)
+            T = Q_(0, 'newton meter')
 
         return T
 
@@ -200,8 +200,8 @@ class MachinePM25MV(VerticalMillingMachine):
 class MachinePM25MV_DMMServo(VerticalMillingMachine):
     def __init__(self):
         VerticalMillingMachine.__init__(self)
-        self.max_rpm = 5000 * (ureg.turn / ureg.min)
-        self.min_rpm = 10 * (ureg.turn / ureg.min)
+        self.max_rpm = Q_(5000, 'turn / min')
+        self.min_rpm = Q_(10, 'turn / min')
         self.name = 'PM25MV_DMMServo'
         self.description = 'PM25MV milling machine with DMM 86M Servo'
         self.torque_intermittent_define = True
@@ -213,9 +213,9 @@ class MachinePM25MV_DMMServo(VerticalMillingMachine):
         # Converting the torque to a linear force:
         # F = T * 2Pi * (gear ratio) * (%eff) / (lead pitch)
         #
-        # >>> ((1.8 * ureg.newton * ureg.meter) * 2 * math.pi * 1 * .95 / (5*ureg.mm))
+        # >>> Q_(1.8, 'newton meter') * 2 * math.pi * 1 * .95 / Q_(5, 'mm')
         # 2148.8493750554185 <Unit('newton')>
-        # >>> ((1.8 * ureg.newton * ureg.meter) * 2 * math.pi * 1 * .95 / (5*ureg.mm)).to('lbf')
+        # >>> (Q_(1.8, 'newton meter') * 2 * math.pi * 1 * .95 / Q_(5, 'mm')).to('lbf')
         # 483.080556886682 <Unit('force_pound')>
         #
         # Measured using a Taylor 5559 BIA scale. Could not find a manual for specifications,
@@ -231,39 +231,39 @@ class MachinePM25MV_DMMServo(VerticalMillingMachine):
     # 0.275055405	4989.821883	0.26540261	4979.643766
 
     def _torque_continuous(self, abs_rpm):
-        x1, y1 = 2994.910941 * ureg.tpm, 2.592785028 * (ureg.newton * ureg.meter)
-        x2, y2 = 4969.465649 * ureg.tpm, 1.494459493 * (ureg.newton * ureg.meter)
+        x1, y1 = Q_(2994.910941, 'tpm'), Q_(2.592785028, 'newton meter')
+        x2, y2 = Q_(4969.465649, 'tpm'), Q_(1.494459493, 'newton meter')
         dx = x1 - x2
         dy = y1 - y2
         m = dy / dx
         b = y1 - m * x1
 
-        if 0 * ureg.tpm <= abs_rpm <= 3000 * ureg.tpm:
+        if Q_(0, 'tpm') <= abs_rpm <= Q_(3000, 'tpm'):
             T = 2.6 * (ureg.newton * ureg.meter)
-        elif 3000 * ureg.tpm < abs_rpm < 5000 * ureg.tpm:
+        elif Q_(3000, 'tpm') < abs_rpm < Q_(5000, 'tpm'):
             T = m * abs_rpm + b
-        elif abs_rpm == 5000 * ureg.tpm:
-            T = 1.5 * (ureg.newton * ureg.meter)
+        elif abs_rpm == Q_(5000, 'tpm'):
+            T = Q_(1.5, 'newton meter')
         else:
-            T = 0 * (ureg.newton * ureg.meter)
+            T = Q_(0, 'newton meter')
 
         return T
 
     def _torque_intermittent(self, abs_rpm):
-        x1, y1 = 3137.40458 * ureg.tpm, 7.160182221 * (ureg.newton * ureg.meter)
-        x2, y2 = 4979.643766 * ureg.tpm, 3.168628417 * (ureg.newton * ureg.meter)
+        x1, y1 = Q_(3137.40458, 'tpm'), Q_(7.160182221, 'newton meter')
+        x2, y2 = Q_(4979.643766, 'tpm'), Q_(3.168628417, 'newton meter')
         dx = x1 - x2
         dy = y1 - y2
         m = dy / dx
         b = y1 - m * x1
 
-        if 0 * ureg.tpm <= abs_rpm <= 3100 * ureg.tpm:
+        if Q_(0, 'tpm') <= abs_rpm <= Q_(3100, 'tpm'):
             T = 7.2 * (ureg.newton * ureg.meter)
-        elif 3100 * ureg.tpm < abs_rpm < 5000 * ureg.tpm:
+        elif Q_(3100, 'tpm') < abs_rpm < Q_(5000, 'tpm'):
             T = m * abs_rpm + b
-        elif abs_rpm == 5000 * ureg.tpm:
-            T = 3.2 * (ureg.newton * ureg.meter)
+        elif abs_rpm == Q_(5000, 'tpm'):
+            T = Q_(3.2, 'newton meter')
         else:
-            T = 0 * (ureg.newton * ureg.meter)
+            T = Q_(0, 'newton meter')
 
         return T

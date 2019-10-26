@@ -25,11 +25,11 @@ class ToolMaterialHSS(ToolMaterialType):
     def __init__(self):
         ToolMaterialType.__init__(self)
         self.specific_cutting_force = float('inf')
-        self.specific_cutting_energy = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
+        self.specific_cutting_energy = Q_(.012, 'kilowatt / (cm ** 3 / min)')
 
 
 class ToolMaterialCarbide(ToolMaterialType):
     def __init__(self):
         ToolMaterialType.__init__(self)
         self.specific_cutting_force = float('inf')
-        self.specific_cutting_energy = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
+        self.specific_cutting_energy = Q_(.012, 'kilowatt / (cm ** 3 / min)')

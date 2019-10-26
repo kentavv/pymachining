@@ -1,5 +1,7 @@
 import math
 
+from pymachining.materials import *
+from pymachining.tools import *
 from pymachining.units import *
 
 
@@ -39,9 +41,9 @@ class DrillOp(MachiningOp):
         :param rpm:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> rpm = 1000 * ureg.revolutions_per_minute
-        >>> v_c = DrillOp.cutting_speed_(cutter_diameter, rpm)
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> rpm = Q_(1000, 'revolutions_per_minute')
+        >>> v_c = DrillOp.cutting_speed_(DrillHSS(cutter_diameter), rpm)
         >>> print(cutter_diameter, rpm, v_c, sep='\\n')
         12.7 millimeter
         1000 revolutions_per_minute
@@ -64,8 +66,8 @@ class DrillOp(MachiningOp):
         :param cutting_speed:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> cutting_speed = 40 * ureg.m / ureg.min
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> cutting_speed = Q_(40, 'm / min')
         >>> n = DrillOp.spindle_speed_(cutter_diameter, cutting_speed)
         1002.5508226261124 / minute
         >>> print(n)
@@ -96,16 +98,16 @@ class DrillOp(MachiningOp):
         :param spindle_speed:
         :return:
 
-        # speed_per_revolution = 1 * ureg.mm / ureg.revolution
-        # spindle_speed = 1000 * ureg.revolutions_per_minute
+        # speed_per_revolution = Q_(1, 'mm / revolution')
+        # spindle_speed = Q_(1000, 'revolutions_per_minute')
 
         # using turn instead of rev_per_min results in simplier final units, without need for to_base_units()
 
-        >>> speed_per_revolution = 1 * ureg.mm / ureg.turn
-        >>> spindle_speed = 1000 * (ureg.turn / ureg.minute)
+        >>> speed_per_revolution = Q_(1, 'mm / turn')
+        >>> spindle_speed = Q_(1000, 'turn / minute')
         >>> v_f = DrillOp.penetration_rate_(speed_per_revolution, spindle_speed)
         >>> print(v_f)
-        1000.0 millimeter / minute
+        1000 millimeter / minute
         """
 
         f_n = speed_per_revolution
@@ -126,8 +128,8 @@ class DrillOp(MachiningOp):
         :param spindle_speed:
         :return:
 
-        >>> penetration_rate = 1000 * ureg.mm / ureg.min
-        >>> spindle_speed = 1000 * (ureg.turn / ureg.min)
+        >>> penetration_rate = Q_(1000, 'mm / min')
+        >>> spindle_speed = Q_(1000, 'turn / min')
         >>> f_n = DrillOp.feed_per_revolution_(penetration_rate, spindle_speed)
         >>> print(f_n)
         1.0 millimeter / turn
@@ -156,9 +158,9 @@ class DrillOp(MachiningOp):
         :param cutting_speed:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> feed_per_revolution = 1 * ureg.mm / ureg.turn
-        >>> cutting_speed = 1000 * ureg.mm / ureg.min
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> feed_per_revolution = Q_(1, 'mm / turn')
+        >>> cutting_speed = Q_(1000, 'mm / min')
         >>> Q = DrillOp.metal_removal_rate__(cutter_diameter, feed_per_revolution, cutting_speed)
         3175.0 millimeter ** 3 / minute
         False
@@ -168,7 +170,7 @@ class DrillOp(MachiningOp):
         True
         >>> print(Q)
         3175.0 millimeter ** 3 / minute
-        >>> print((1 * (ureg.turn / ureg.min)) * (1 * (ureg.mm / ureg.turn)))
+        >>> print((Q_(1, 'turn / min') * Q_(1, 'mm / turn')))
         1 millimeter / minute
         """
 
@@ -198,10 +200,10 @@ class DrillOp(MachiningOp):
         :param spindle_rpm:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> feed_per_revolution = 1 * ureg.mm / ureg.turn
-        >>> # spindle_speed = 1000 * ureg.revolutions_per_minute
-        >>> spindle_speed = 1000 * (ureg.turn / ureg.minute)
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> feed_per_revolution = Q_(1, 'mm / turn')
+        >>> # spindle_speed = Q_(1000, 'revolutions_per_minute')
+        >>> spindle_speed = Q_(1000, 'turn / minute')
         >>> Q = DrillOp.metal_removal_rate_(cutter_diameter, feed_per_revolution, spindle_speed)
         >>> print(Q)
         126676.86977437443 millimeter ** 3 / minute
@@ -238,11 +240,11 @@ class DrillOp(MachiningOp):
         :param specific_cutting_force:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> feed_per_revolution = .2 * (ureg.mm / ureg.turn)
-        >>> cutting_speed = 75 * (ureg.m / ureg.min)
-        >>> cutting_speed = 75 * 1000 * (ureg.mm / ureg.min)
-        >>> specific_cutting_force = 350 * (ureg.newton / ureg.mm ** 2)
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> feed_per_revolution = Q_(.2, 'mm / turn')
+        >>> cutting_speed = Q_(75, 'm / min')
+        >>> cutting_speed = Q_(75 * 1000, 'mm / min')
+        >>> specific_cutting_force = Q_(350, 'newton / mm ** 2')
         >>> # specific_cutting_force.to('kilowatt / cm**3 / min')
         >>> print(specific_cutting_force.to_base_units())
         350000000.0 kilogram / meter / second ** 2
@@ -272,14 +274,10 @@ class DrillOp(MachiningOp):
         :param specific_cutting_energy:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> feed_per_revolution = .2 * (ureg.mm / ureg.turn)
-        >>> spindle_rpm = 1000 * (ureg.turn / ureg.min)
-        >>> # Be careful with expressing units, the way they are written in text may not be the way they should be written in code
-        >>> # specific_cutting_energy = .065 * (ureg.kilowatt / ureg.cm**3 / ureg.min)
-        >>> # print(specific_cutting_energy)
-        >>> specific_cutting_energy = .065 * (ureg.kilowatt / (ureg.cm ** 3 / ureg.min))
-        >>> # print(specific_cutting_energy)
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> feed_per_revolution = Q_(.2, 'mm / turn')
+        >>> spindle_rpm = Q_(1000, 'turn / min')
+        >>> specific_cutting_energy = Q_(.065, 'kilowatt / (cm ** 3 / min)')
         >>> P = DrillOp.net_power_(cutter_diameter, feed_per_revolution, spindle_rpm, specific_cutting_energy)
         >>> print(P)
         1.6467993070668676 kilowatt
@@ -325,9 +323,9 @@ class DrillOp(MachiningOp):
         :param rpm:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> rpm = 1000 * ureg.revolutions_per_minute
-        >>> v_c = DrillOp(cutter_diameter, Material('aluminum')).cutting_speed(rpm)
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> rpm = Q_(1000, 'revolutions_per_minute')
+        >>> v_c = DrillOp(DrillHSS(cutter_diameter), Material('aluminum')).cutting_speed(rpm)
         >>> print(cutter_diameter, rpm, v_c, sep='\\n')
         12.7 millimeter
         1000 revolutions_per_minute
@@ -343,9 +341,9 @@ class DrillOp(MachiningOp):
         :param cutting_speed:
         :return:
 
-        >>> cutter_diameter = 12.7 * ureg.mm
-        >>> cutting_speed = 40 * ureg.m / ureg.min
-        >>> n = DrillOp(cutter_diameter, Material('aluminum')).spindle_speed(cutting_speed)
+        >>> cutter_diameter = Q_(12.7, 'mm')
+        >>> cutting_speed = Q_(40, 'm / min')
+        >>> n = DrillOp(DrillHSS(cutter_diameter), Material('aluminum')).spindle_speed(cutting_speed)
         1002.5508226261124 / minute
         >>> print(n)
         1002.5508226261124 revolutions_per_minute
@@ -362,9 +360,9 @@ class DrillOp(MachiningOp):
         :param spindle_speed:
         :return:
 
-        >>> penetration_rate = 1000 * ureg.mm / ureg.min
-        >>> spindle_speed = 1000 * (ureg.turn / ureg.min)
-        >>> f_n = DrillOp(0 * ureg.mm, Material('aluminum')).feed_per_revolution(penetration_rate, spindle_speed)
+        >>> penetration_rate = Q_(1000, 'mm / min')
+        >>> spindle_speed = Q_(1000, 'turn / min')
+        >>> f_n = DrillOp(DrillHSS(Q_(0, 'mm')), Material('aluminum')).feed_per_revolution(penetration_rate, spindle_speed)
         >>> print(f_n)
         1.0 millimeter / turn
         """

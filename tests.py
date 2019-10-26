@@ -3,13 +3,13 @@ import numpy as np
 import pylab
 
 import pymachining as pm
-from pymachining import ureg
+from pymachining import ureg, Q_
 
 
 def test_drilling_range():
     stock_material = pm.Material('aluminum')
 
-    cutter_diameter = 12.7 * ureg.mm
+    cutter_diameter = Q_(12.7, 'mm')
     drill = pm.DrillHSS(cutter_diameter)
 
     drill_op = pm.DrillOp(drill, stock_material)
@@ -37,7 +37,7 @@ def test_drilling_range():
     ay3 = []
     ay4 = []
     for diam in np.linspace(1 / 64., 1., 100):
-        cutter_diameter = diam * ureg.inch
+        cutter_diameter = Q_(diam, 'inch')
 
         drill = pm.DrillHSS(cutter_diameter)
         drill_op = pm.DrillOp(drill, stock_material)

@@ -32,7 +32,7 @@ class Drill(Tool):
     def __init__(self, diameter, tool_material):
         Tool.__init__(self, diameter, tool_material)
         if diameter in self.letters_and_numbers_and_fractions:
-            self.diameter = self.letters_and_numbers_and_fractions[diameter][1] * ureg.mm
+            self.diameter = Q_(self.letters_and_numbers_and_fractions[diameter][1], 'mm')
 
     # Table values from https://en.wikipedia.org/wiki/Drill_bit_sizes
     letters_and_numbers_and_fractions = {'#104': [0.0031, 0.079],
@@ -325,8 +325,8 @@ class DrillHSS(Drill):
                        0.0175, 0.0183, 0.0191, 0.0198]
         feed_ipr_ = feed_ipr_i_
 
-        diam_in = [x * ureg.inch for x in diam_in_]
-        feed_ipr = [x * (ureg.inch / ureg.turn) for x in feed_ipr_]
+        diam_in = [Q_(x, 'inch') for x in diam_in_]
+        feed_ipr = [Q_(x, 'inch / turn') for x in feed_ipr_]
 
         # print(diam_in)
         ipr = None
@@ -343,8 +343,7 @@ class DrillHSS(Drill):
                 # Convert to inches, which are the units of the regressed source data. Then select magnitude of
                 # measurement, else the calculated values will be in terms of [inch]^rank, the rank of the
                 # fitted polynomial. Finally, add units in/turn to calculated ipr value.
-                ipr = poly.polyval(diam.to('inch').magnitude, coef)
-                ipr *= (ureg.inch / ureg.turn)
+                ipr = Q_(poly.polyval(diam.to('inch').magnitude, coef), 'inch / turn')
             else:
                 for i in range(len(diam_in) - 1):
                     # print(i, diam_in[i], diam_in[i+1])
@@ -392,8 +391,8 @@ class DrillHSS(Drill):
                          'Plastic/Wood': [10, 20, 40, 60, 70, 90, 145, 175, 220, 330]}
 
         thrust_lbs_ = thrust_lbs_d_['aluminum']
-        diam_in = [x * ureg.inch for x in diam_in_]
-        thrust_lbs = [x * ureg.lbs for x in thrust_lbs_]
+        diam_in = [Q_(x, 'inch') for x in diam_in_]
+        thrust_lbs = [Q_(x, 'lbs') for x in thrust_lbs_]
 
         # print(diam_in)
         v = None
@@ -410,8 +409,7 @@ class DrillHSS(Drill):
                 # Convert to inches, which are the units of the regressed source data. Then select magnitude of
                 # measurement, else the calculated values will be in terms of [inch]^rank, the rank of the
                 # fitted polynomial. Finally, add units in/turn to calculated ipr value.
-                v = poly.polyval(diam.to('inch').magnitude, coef)
-                v *= ureg.lbs
+                v = Q_(poly.polyval(diam.to('inch').magnitude, coef), 'lbs')
             else:
                 for i in range(len(diam_in) - 1):
                     # print(i, diam_in[i], diam_in[i+1])
@@ -432,11 +430,10 @@ class DrillHSS(Drill):
         f = feed_rate.to('inch / turn')
 
         # specific cutting force for aluminum
-        kc = 800 * 10 ** 6 * ureg.pascal
+        kc = Q_(800 * 10 ** 6, 'pascal')
         feed_force = .7 * diam / 2. * f * kc
         # Convert from pascal to lbs/in^2
-        feed_force = feed_force.magnitude / 6894.75728
-        feed_force *= ureg.lbs
+        feed_force = Q_(feed_force.magnitude / 6894.75728, 'lbs')
 
         return feed_force
 
@@ -466,6 +463,6 @@ class DrillHSS(Drill):
         pylab.plot(x, y2, label='polynomial regression')
         pylab.plot(x, y3, label='calculated estimate')
         if highlight is not None:
-            pylab.axhline(y=highlight.to('lbs').magnitude, label='max thrust')
+            pylab.axhline(y=highlight.to('lbs').magnitude, color='#ff3333ee', label='max thrust')
         pylab.legend()
         pylab.show()
