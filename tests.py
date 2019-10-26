@@ -57,7 +57,8 @@ def test_drilling_range():
 
         row = [cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P, t]
         if do_once:
-            print('[cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P, feed_force]')
+            header = '[cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P, feed_force]'
+            print(header)
             print(' '.join(f'[{x.units}]' for x in row))
             do_once = False
         print(' '.join(f'{x.magnitude:.4f}' for x in row))
@@ -123,10 +124,9 @@ def test_drilling_range():
     fig.tight_layout()
     pylab.show()
 
-
-
     # pylab.legend()
     # pylab.show()
+
 
 def main():
     test_drilling_range()
