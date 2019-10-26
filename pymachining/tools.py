@@ -375,3 +375,93 @@ class DrillHSS(Drill):
         pylab.plot(x, y2, label='polynomial regression')
         pylab.legend()
         pylab.show()
+
+    def thrust(self, stock_material, fit=True):
+        # Trust numbers from:
+        # http://www.drill-hq.com/products/multiple-heads/custom-heads/multiple-spindle-drilling-head-for-different-size-tooling/recommended-tool-speed-chart/
+
+        diam = self.diameter
+
+        diam_in_ = [1 / 16., 1 / 8., 3 / 16., 1 / 4., 5 / 16., 3 / 8., 1 / 2., 5 / 8., 3 / 4., 1, ]
+        thrust_lbs_d_ = {'aluminum': [6, 25, 50, 80, 100, 125, 200, 260, 335, 450],
+                         'brass': [10, 25, 45, 70, 100, 135, 215, 295, 395, 525],
+                         'Cast Iron': [15, 40, 100, 150, 200, 260, 350, 480, 550, 800],
+                         'Low Carbon Steel': [30, 80, 145, 230, 340, 440, 700, 1050, 1300, 2000],
+                         'Stainless Steel': [40, 100, 180, 290, 425, 465, 780, 1100, 1500, 1900],
+                         'Plastic/Wood': [10, 20, 40, 60, 70, 90, 145, 175, 220, 330]}
+
+        thrust_lbs_ = thrust_lbs_d_['aluminum']
+        diam_in = [x * ureg.inch for x in diam_in_]
+        thrust_lbs = [x * ureg.lbs for x in thrust_lbs_]
+
+        # print(diam_in)
+        v = None
+        if diam < diam_in[0]:
+            v = thrust_lbs[0]
+        elif diam >= diam_in[-1]:
+            v = thrust_lbs[-1]
+        else:
+            if fit:
+                import numpy.polynomial.polynomial as poly
+                deg = 4
+                coef, (residuals, rank, singular_values, rcond) = poly.polyfit(diam_in_, thrust_lbs_, deg, full=True)
+                # print(coef, residuals[0])
+                # Convert to inches, which are the units of the regressed source data. Then select magnitude of
+                # measurement, else the calculated values will be in terms of [inch]^rank, the rank of the
+                # fitted polynomial. Finally, add units in/turn to calculated ipr value.
+                v = poly.polyval(diam.to('inch').magnitude, coef)
+                v *= ureg.lbs
+            else:
+                for i in range(len(diam_in) - 1):
+                    # print(i, diam_in[i], diam_in[i+1])
+                    if diam_in[i] <= diam <= diam_in[i + 1]:
+                        x = diam
+                        x1, x2 = diam_in[i:i + 2]
+                        y1, y2 = thrust_lbs[i:i + 2]
+                        y = (x - x1) / (x2 - x1) * (y2 - y1) + y1
+                        v = y
+                        break
+        return v
+
+    def thrust2(self, stock_material, feed_rate):
+        # Thrust equation from:
+        # http://media.guhring.com/documents/tech/Formulas/Drilling.pdf
+
+        diam = self.diameter.to('inch')
+        f = feed_rate.to('inch / turn')
+
+        # specific cutting force for aluminum
+        kc = 800 * 10 ** 6 * ureg.pascal
+        feed_force = .7 * diam / 2. * f * kc
+        # Convert from pascal to lbs/in^2
+        feed_force = feed_force.magnitude / 6894.75728
+        feed_force *= ureg.lbs
+
+        return feed_force
+
+    @classmethod
+    def plot_thrust(cls, stock_material):
+        x = np.linspace(0, 2.5, 100) * ureg.inch
+
+        def f(diam, fit):
+            d = cls(diam)
+            v = d.thrust(stock_material, fit)
+            return v
+
+        def f2(diam):
+            d = cls(diam)
+            fr = d.feed_rate(stock_material)
+            v = d.thrust2(stock_material, fr)
+            return v
+
+        y1 = [f(x_, False).magnitude for x_ in x]
+        y2 = [f(x_, True).magnitude for x_ in x]
+        y3 = [f2(x_).magnitude for x_ in x]
+        pylab.xlabel('drill size [in]')
+        pylab.ylabel('thrust [lbs]')
+        pylab.xlim(0, 2.5)
+        pylab.plot(x, y1, label='linear regression')
+        pylab.plot(x, y2, label='polynomial regression')
+        pylab.plot(x, y3, label='calculated estimate')
+        pylab.legend()
+        pylab.show()

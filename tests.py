@@ -7,6 +7,7 @@ from pymachining import ureg
 def test_drilling_range():
     stock_material = pm.Material('aluminum')
     pm.DrillHSS.plot_feedrate(stock_material)
+    pm.DrillHSS.plot_thrust(stock_material)
 
     cutter_diameter = 12.7 * ureg.mm
     drill = pm.DrillHSS(cutter_diameter)
@@ -30,7 +31,7 @@ def test_drilling_range():
         drill = pm.DrillHSS(cutter_diameter)
         drill_op = pm.DrillOp(drill, stock_material)
 
-        sfm = stock_material.sfm() * .2
+        sfm = stock_material.sfm() * 1
         feed_per_revolution = drill.feed_rate(stock_material)
         spindle_rpm_r = drill_op.rrpm(sfm)
 
@@ -47,7 +48,7 @@ def test_drilling_range():
             print('[cutter_diameter, sfm, feed_per_revolution, spindle_rpm_r, spindle_rpm, t_c, t_i, p_c, p_i, P]')
             print(' '.join(f'[{x.units}]' for x in row))
             do_once = False
-        print(' '.join(f'{x.magnitude:.2f}' for x in row))
+        print(' '.join(f'{x.magnitude:.4f}' for x in row))
 
 
 def main():
