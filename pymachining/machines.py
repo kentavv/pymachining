@@ -5,10 +5,12 @@ class MachineType:
     def __init__(self):
         self.max_rpm = float('inf')
         self.min_rpm = float('inf')
-        self.gear_ratio = 1
+        self.gear_ratio = 1.
         self.name = 'Unknown'
         self.description = 'Unknown'
         self.torque_intermittent_define = False
+        self.idle_power = 0. * ureg.watt  # tare power
+        self.efficiency = 1.
 
     def set_gear_ratio(self, gear_ratio):
         self.gear_ratio = gear_ratio
@@ -57,7 +59,7 @@ class MachineType:
         t = self.torque_continuous(rpm)
         # return t * rpm
         # return t * rpm / 9.5488)
-        return (t * rpm).to('watt')
+        return (t * rpm / self.efficiency).to('watt') + self.idle_power
 
     def power_intermittent(self, rpm):
         if not isinstance(rpm, ureg.Quantity) or rpm.dimensionless:
@@ -66,7 +68,7 @@ class MachineType:
         t = self.torque_intermittent(rpm)
         # return t * rpm
         # return t * rpm / 9.5488)
-        return (t * rpm).to('watt')
+        return (t * rpm / self.efficiency).to('watt') + self.idle_power
 
     def plot_torque_speed_curve(self, highlight_power=None, highlight_torque=None, highlight_rpm=None):
         import pylab
@@ -131,6 +133,17 @@ class MachineType:
             rpm = self.max_rpm
             adjusted = True
         return rpm, adjusted
+
+
+class LatheMachine(MachineType):
+    def __init__(self):
+        MachineType.__init__(self)
+        self.efficiency_motor = 1.
+        self.efficiency_belt = 1.
+        self.efficiency_front_bearing = 1.
+        self.efficiency_rear_bearing = 1.
+        self.efficiency = (self.efficiency_motor * self.efficiency_belt *
+                           self.efficiency_front_bearing * self.efficiency_rear_bearing)
 
 
 class MillingMachine(MachineType):
