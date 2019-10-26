@@ -368,6 +368,7 @@ class DrillHSS(Drill):
 
         y1 = [f(x_, False).magnitude for x_ in x]
         y2 = [f(x_, True).magnitude for x_ in x]
+        pylab.title('Feed rate', fontsize=16.)
         pylab.xlabel('drill size [in]')
         pylab.ylabel('feed rate [in / rev]')
         pylab.xlim(0, 2.5)
@@ -457,6 +458,7 @@ class DrillHSS(Drill):
         y1 = [f(x_, False).magnitude for x_ in x]
         y2 = [f(x_, True).magnitude for x_ in x]
         y3 = [f2(x_).magnitude for x_ in x]
+        pylab.title('Feed thrust', fontsize=16.)
         pylab.xlabel('drill size [in]')
         pylab.ylabel('thrust [lbs]')
         pylab.xlim(0, 2.5)
