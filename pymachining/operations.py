@@ -577,13 +577,13 @@ class DrillOp(MachiningOp):
 
 
 class MillingOp(MachiningOp):
-    def __init__(self, face_mill, stock_material):
-        MachiningOp.__init__(self, stock_material)
+    def __init__(self, tool, stock_material):
+        MachiningOp.__init__(self, tool, stock_material)
         self.description = 'Unknown milling operation'
 
 
 class FaceMillOp(MillingOp):
-    def __init__(self, face_mill, stock_material):
-        MillingOp.__init__(self, stock_material)
+    def __init__(self, face_mill_tool, stock_material):
+        MillingOp.__init__(self, face_mill_tool, stock_material)
         self.description = 'Face milling operation'
-        self.cutter_diameter = face_mill.diameter
+        self.cutter_diameter = face_mill_tool.diameter
