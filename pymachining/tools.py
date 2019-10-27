@@ -2,11 +2,19 @@ import numpy as np
 import pylab
 
 from pymachining.units import *
+from pymachining.materials import *
 from pymachining.tool_materials import *
+
+
+class ToolIncompatibleMaterial(Exception):
+    def __init__(self, s):
+        Exception.__init__(self)
+        self.description = s
 
 
 class Tool:
     def __init__(self, diameter, tool_material):
+        self.description = 'Unknown tool'
         self.diameter = diameter
         self.tool_material = tool_material
         pass
@@ -31,8 +39,10 @@ class Tool:
 class Drill(Tool):
     def __init__(self, diameter, tool_material):
         Tool.__init__(self, diameter, tool_material)
+        self.description = 'Unknown drill'
         if diameter in self.letters_and_numbers_and_fractions:
             self.diameter = Q_(self.letters_and_numbers_and_fractions[diameter][1], 'mm')
+        self.drill_style = 'unknown'
 
     # Table values from https://en.wikipedia.org/wiki/Drill_bit_sizes
     letters_and_numbers_and_fractions = {'#104': [0.0031, 0.079],
@@ -235,8 +245,10 @@ class Drill(Tool):
 class DrillHSS(Drill):
     def __init__(self, diameter):
         Drill.__init__(self, diameter, ToolMaterialHSS())
+        self.description = 'HSS (jobber?) drill'
+        self.drill_style = 'jobber'
 
-    def feed_rate(self, stock_material, fit=True):
+    def feed_rate_(self, stock_material, drill_len, fit=True):
         # https://www.dormerpramet.com/Downloads/RoundTool_Speeds_and_Feeds.pdf
 
         # The drill sets that I have are:
@@ -281,8 +293,51 @@ class DrillHSS(Drill):
         #         Style: R41  7.2:98J, 7.3:98I
 
         # Application Material Groups (AMG), Hardness HRC, ISO
+        # 1. Steel
+        # 1.1 Magnetic soft steel 12L14, 12L15 <120 HB P 1
+        # 1.2 Structural Steel/ case carburising steel 1005-1025, 1214, 1215, A36 <200 HB P 1
+        # 1.3 Plain Carbon steel 1030-1060, 1050-1060, 1144-1146 <24 P 2
+        # 1.4 Alloy steel 4140,4340,52100,8620 H11-H41,A2,D2,01,P20,420 <24 P 3
+        # 1.5 Alloy steel/ Hardened and tempered steel 4140,4340,52100,8620 H11-H41,A2,D2,01,P20,420 >24<38 P 4
+        # 1.6 Alloy steel/ Hardened and tempered steel 4140,4340,52100,8620 H11-H41,A2,D2,01,P20,420 >38 H 1
+        # 1.7 Alloy steel Hardened A2-D2, H10-H41, L1-L6, M1-M42, T1 49-55 H 3
+        # 1.8 Alloy steel Hardened A2-D2, H10-H41, L1-L6, M1-M42, T1 55-63 H 4
+        # 2. Stainless Steel
+        # 2.1 Free machining Stainless Steel 200, 303, 416, 420F, 430F, 440 <24 M 1
+        # 2.2 Austenitic 301, 302, 304, 316, 321, 330, CUSTOM 455, AM-350 <24 M 3
+        # 2.3 Ferritic + Austenitic, Martensitic 318-329, 400-446, DUPLEX <32 M 2
+        # 2.4 Precipitation Hardened 15-5PH, Custom 450 17-4PH <32 S 2
+        # 3. Cast Iron
+        # 3.1 Lamellar graphite Grey, G10, Gg40, J431C, A48 CLASS 20 <150 HB K 1
+        # 3.2 Lamellar graphite Grey, GG25-Gg40, J158, A48 CLASS 40-60 >150 HB<32 K 2
+        # 3.3 Nodular graphite/ Malleable Cast Iron A220, A436, A439, A602, Black, GGG40-GGG70 <200 HB K 3
+        # 3.4 Nodular graphite/ Malleable Cast Iron Black Gts/Gtw, J434C >200 HB<32 K 4
+        # 4.Titanium
+        # 4.1 Titanium, unalloyed Commercially Pure <200 HB S 1
+        # 4.2 Titanium, alloyed 6AI4V, 6A14V-2Sn, Monel, Monel K <28 S 2
+        # 4.3 Titanium, alloyed 6AI4V-4Mo, 7A14V-4Mo, 4911-4967 >28<38 S 3
+        # 5. Nickel
+        # 5.1 Nickel, unalloyed Commercially Pure, 17644, 200, 5553 <150 HB S 1
+        # 5.2 Nickel, alloyed Monel 400, Hastelloy C, Inconel 625, Waspaloy <28 S 2
+        # 5.3 Nickel, alloyed Iconel 718,Nimonic 75-95,Rene 41,Iconel 825,A286 >28<38 S 3
+        # 6. Copper
+        # 6.1 Copper Commercially Pure <100 HB N 3
+        # 6.2 ß-Brass, Bronze 314-340, 350-370 <200 HB N 4
+        # 6.3 α-Brass Alloyed Cu + Al + Fe, Long Chipping <200 HB N 3
+        # 6.4 High Strength Bronze Ampco 18-25 <49 N 4
+        # 7. Aluminium & Magnesium
+        # 7.1 Al, Mg, unalloyed Commercially Pure <100 HB N 1
         # 7.2 Al alloyed, Si<0.5% 6061 T6, 7075, 314-340 <150 HB N 1
         # 7.3 Al alloyed, Si>0.5%<10% 6061 T6, 380-390 <120 HB N 1
+        # 7.4 Al alloyed, Si>10% Mg alloys Magnesium Whisker Reinforced <120 HB N 2
+        # 8.Synthetic Materials
+        # 8.1 Thermoplastics Ultramid, Polystrol --- O
+        # 8.2 Thermosetting plastics Bakelit, Pertinax --- O
+        # 8.3 Reinforced plastic materials CFK, GFKAFK --- O
+        # 9.Hard Mat.
+        # 9.1 Cermets (Metal-ceramics) Ferrotic <54 H
+        # 10.Graphite
+        # 10.1 Standard graphite --- O
 
         # Feed in Inches per Revolution (IPR) ± 25% Ø Diameter
         # 1mm,1/32”  2mm,3/32”    3mm,1/8”    4mm,5/32”   5mm,3/16”   6mm,1/4”    8mm,5/16”   10mm,3/8”   12mm,1/2”   15mm,9/16”  16mm,5/8”   20mm,3/4”   25mm,1” 30mm,1.1/8” 40mm,1.5/8” 50mm,2”
@@ -317,13 +372,40 @@ class DrillHSS(Drill):
         diam_in_ = [1 / 32., 3 / 32., 1 / 8., 5 / 32., 3 / 16., 1 / 4., 5 / 16., 3 / 8., 1 / 2., 9 / 16., 5 / 8.,
                     3 / 4.,
                     1., 1 + 1 / 8., 1 + 5 / 8., 2.]
+        feed_ipr_d_ = [0.0006, 0.0015, 0.0021, 0.0024, 0.0027, 0.0031, 0.0039, 0.0047, 0.0051, 0.0059, 0.0061, 0.0074,
+                       0.0083, 0.0090, 0.0100, 0.0108]
+        feed_ipr_e_ = [0.0007, 0.0017, 0.0024, 0.0028, 0.0031, 0.0037, 0.0045, 0.0055, 0.0059, 0.0068, 0.0071, 0.0085,
+                       0.0094, 0.0102, 0.0112, 0.0122]
+        feed_ipr_f_ = [0.0007, 0.0020, 0.0029, 0.0033, 0.0037, 0.0043, 0.0054, 0.0065, 0.0070, 0.0080, 0.0083, 0.0098,
+                       0.0108, 0.0116, 0.0126, 0.0135]
+        feed_ipr_g_ = [0.0007, 0.0022, 0.0033, 0.0038, 0.0043, 0.0050, 0.0063, 0.0075, 0.0081, 0.0091, 0.0094, 0.0110,
+                       0.0122, 0.0130, 0.0140, 0.0148]
         feed_ipr_h_ = [0.0008, 0.0026, 0.0040, 0.0046, 0.0051, 0.0059, 0.0075, 0.0090, 0.0096, 0.0107, 0.0110, 0.0126,
                        0.0140, 0.0148, 0.0157, 0.0165]
         feed_ipr_i_ = [0.0008, 0.0030, 0.0047, 0.0053, 0.0059, 0.0068, 0.0087, 0.0104, 0.0110, 0.0122, 0.0126, 0.0142,
                        0.0157, 0.0165, 0.0173, 0.0181]
         feed_ipr_j_ = [0.0009, 0.0033, 0.0053, 0.0060, 0.0067, 0.0078, 0.0098, 0.0117, 0.0124, 0.0137, 0.0142, 0.0159,
                        0.0175, 0.0183, 0.0191, 0.0198]
-        feed_ipr_ = feed_ipr_i_
+        if isinstance(stock_material, MaterialAluminum):
+            if drill_len == 'stub':
+                feed_ipr_ = feed_ipr_i_
+                # feed_ipr_ = feed_ipr_j_
+            else:  # elif drill_len == 'jobber':
+                feed_ipr_ = feed_ipr_h_
+        elif isinstance(stock_material, MaterialSteelMild):
+            if drill_len == 'stub':
+                feed_ipr_ = feed_ipr_j_
+            else:  # elif drill_len == 'jobber':
+                feed_ipr_ = feed_ipr_f_
+        elif isinstance(stock_material, MaterialSteelMedium):
+            if drill_len == 'stub':
+                feed_ipr_ = feed_ipr_e_
+            else:  # elif drill_len == 'jobber':
+                feed_ipr_ = feed_ipr_d_
+        elif isinstance(stock_material, MaterialSteelHigh):
+            raise ToolIncompatibleMaterial('hss tool vs. tool steel')
+        else:
+            feed_ipr_ = feed_ipr_h_
 
         diam_in = [Q_(x, 'inch') for x in diam_in_]
         feed_ipr = [Q_(x, 'inch / turn') for x in feed_ipr_]
@@ -355,6 +437,9 @@ class DrillHSS(Drill):
                         ipr = y
                         break
         return ipr
+
+    def feed_rate(self, stock_material, fit=True):
+        return self.feed_rate_(stock_material, 'jobber', fit=fit)
 
     @classmethod
     def plot_feedrate(cls, stock_material):
@@ -466,3 +551,23 @@ class DrillHSS(Drill):
             pylab.axhline(y=highlight.to('lbs').magnitude, color='#ff3333ee', label='max thrust')
         pylab.legend()
         pylab.show()
+
+
+class DrillHSSJobber(DrillHSS):
+    def __init__(self, diameter):
+        DrillHSS.__init__(self, diameter)
+        self.description = 'HSS jobber drill'
+        self.drill_style = 'jobber'
+
+    def feed_rate(self, stock_material, fit=True):
+        return self.feed_rate_(stock_material, 'jobber', fit=fit)
+
+
+class DrillHSSStub(DrillHSS):
+    def __init__(self, diameter):
+        DrillHSS.__init__(self, diameter)
+        self.description = 'HSS stub drill'
+        self.drill_style = 'stub'
+
+    def feed_rate(self, stock_material, fit=True):
+        return self.feed_rate_(stock_material, 'stub', fit=fit)
