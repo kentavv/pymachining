@@ -7,6 +7,7 @@ from pymachining.units import *
 
 class MachiningOp:
     def __init__(self, tool, stock_material):
+        self.description = 'Unknown machining operation'
         self.tool = tool
         self.stock_material = stock_material
 
@@ -30,6 +31,7 @@ class DrillOp(MachiningOp):
 
     def __init__(self, drill, stock_material):
         MachiningOp.__init__(self, drill, stock_material)
+        self.description = 'Drilling operation'
         self.cutter_diameter = drill.diameter
 
     @staticmethod
@@ -574,7 +576,14 @@ class DrillOp(MachiningOp):
         return self.rrpm_(self.cutter_diameter, speed)
 
 
-class FaceMillOp(MachiningOp):
+class MillingOp(MachiningOp):
     def __init__(self, face_mill, stock_material):
-        MachiningOp.__init__(self, face_mill, stock_material)
+        MachiningOp.__init__(self, stock_material)
+        self.description = 'Unknown milling operation'
+
+
+class FaceMillOp(MillingOp):
+    def __init__(self, face_mill, stock_material):
+        MillingOp.__init__(self, stock_material)
+        self.description = 'Face milling operation'
         self.cutter_diameter = face_mill.diameter
