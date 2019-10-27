@@ -29,4 +29,11 @@ PyMachiningBase (pymachining.base)
     ToolMaterialType(PyMachiningBase) (pymachining.tool_materials)
         ToolMaterialHSS(ToolMaterialType) (pymachining.tool_materials)
         ToolMaterialCarbide(ToolMaterialType) (pymachining.tool_materials)
+        
+BaseException(object) (builtins)
+    Exception(BaseException) (builtins)
+        PyMachiningException(Exception) (pymachining.base)
+            ToolMaterialUnknown(PyMachiningException) (pymachining.tool_materials)
+            MaterialUnknown(PyMachiningException) (pymachining.materials)
+            ToolIncompatibleMaterial(PyMachiningException) (pymachining.tools)
 </pre>
