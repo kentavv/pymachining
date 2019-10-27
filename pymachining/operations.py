@@ -572,3 +572,9 @@ class DrillOp(MachiningOp):
     @ureg.check(None, '[length] * turn / [time]')
     def rrpm(self, speed):
         return self.rrpm_(self.cutter_diameter, speed)
+
+
+class FaceMillOp(MachiningOp):
+    def __init__(self, face_mill, stock_material):
+        MachiningOp.__init__(self, face_mill, stock_material)
+        self.cutter_diameter = face_mill.diameter
