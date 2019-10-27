@@ -1,12 +1,14 @@
 import math
 
+from pymachining.base import *
 from pymachining.materials import *
 from pymachining.tools import *
 from pymachining.units import *
 
 
-class MachiningOp:
+class MachiningOp(PyMachiningBase):
     def __init__(self, tool, stock_material):
+        PyMachiningBase.__init__(self)
         self.description = 'Unknown machining operation'
         self.tool = tool
         self.stock_material = stock_material

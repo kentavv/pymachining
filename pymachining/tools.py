@@ -1,19 +1,21 @@
 import numpy as np
 import pylab
 
+from pymachining.base import *
 from pymachining.units import *
 from pymachining.materials import *
 from pymachining.tool_materials import *
 
 
-class ToolIncompatibleMaterial(Exception):
-    def __init__(self, s):
-        Exception.__init__(self)
+class ToolIncompatibleMaterial(PyMachiningException):
+    def __init__(self, s=''):
+        PyMachiningException.__init__(self)
         self.description = s
 
 
-class Tool:
+class Tool(PyMachiningBase):
     def __init__(self, diameter, tool_material):
+        PyMachiningBase.__init__(self)
         self.description = 'Unknown tool'
         self.diameter = diameter
         self.tool_material = tool_material

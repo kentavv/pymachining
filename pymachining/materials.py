@@ -1,9 +1,11 @@
+from pymachining.base import *
 from pymachining.units import *
 from pymachining.tool_materials import *
 
 
-class MaterialUnknown(Exception):
-    def __init__(self, material_name):
+class MaterialUnknown(PyMachiningException):
+    def __init__(self, material_name=''):
+        PyMachiningException.__init__(self)
         self.material_name = material_name
 
 
@@ -24,8 +26,9 @@ def Material(material_name):
         raise MaterialUnknown(material_name)
 
 
-class MaterialType:
+class MaterialType(PyMachiningBase):
     def __init__(self):
+        PyMachiningBase.__init__(self)
         self.description = 'Unknown material'
         self.specific_cutting_force = float('inf')
         self.specific_cutting_energy = float('inf')

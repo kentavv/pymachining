@@ -1,8 +1,10 @@
+from pymachining.base import *
 from pymachining.units import *
 
 
-class MachineType:
+class MachineType(PyMachiningBase):
     def __init__(self):
+        PyMachiningBase.__init__(self)
         self.max_rpm = float('inf')
         self.min_rpm = float('inf')
         self.gear_ratio = 1.
