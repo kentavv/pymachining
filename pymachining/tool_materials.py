@@ -17,19 +17,16 @@ def ToolMaterial(material_name):
 
 class ToolMaterialType:
     def __init__(self):
-        self.specific_cutting_force = float('inf')
-        self.specific_cutting_energy = float('inf')
+        self.description = 'Unknown tool material'
 
 
 class ToolMaterialHSS(ToolMaterialType):
     def __init__(self):
         ToolMaterialType.__init__(self)
-        self.specific_cutting_force = float('inf')
-        self.specific_cutting_energy = Q_(.012, 'kilowatt / (cm ** 3 / min)')
+        self.description = 'High speed steel tool material'
 
 
 class ToolMaterialCarbide(ToolMaterialType):
     def __init__(self):
         ToolMaterialType.__init__(self)
-        self.specific_cutting_force = float('inf')
-        self.specific_cutting_energy = Q_(.012, 'kilowatt / (cm ** 3 / min)')
+        self.description = 'Carbide tool material'
