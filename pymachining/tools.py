@@ -573,3 +573,176 @@ class DrillHSSStub(DrillHSS):
 
     def feed_rate(self, stock_material, fit=True):
         return self.feed_rate_(stock_material, 'stub', fit=fit)
+
+
+class Tap(Tool):
+    def __init__(self, diameter, tool_material=''):
+        Tool.__init__(self, diameter, tool_material)
+        self.description = 'Unknown tap'
+        if diameter in Drill.letters_and_numbers_and_fractions:
+            self.diameter = Q_(Drill.letters_and_numbers_and_fractions[diameter][1], 'mm')
+        self.tap_style = 'unknown'
+
+    def feed(self, stock_material):
+        pass
+
+    def speed(self, stock_material):
+        # https://www.parlec.com/Parlec/media/technical_specs/Tapping-Speeds-Torque-Requirements.pdf?ext=.pdf
+
+        sfm_d = {
+            'aluminum': [90 - 110],
+            'brass': [80, 100],
+            'bronze': [40 - 60],
+            'copper': [70 - 90],
+            'copper-beryllium': [40 - 50],
+            'inconel, hastalloy, waspalloy': [5 - 15],
+            'iron-cast': [65 - 75],
+            'iron-malleable': [30 - 60],
+            'magnesium': [90 - 110],
+            'plastics': [60 - 90],
+            'steel-cast': [30 - 40],
+            'steel-free machining': [50 - 80],
+            'steel-chromium': [25 - 40],
+            'steel-alloy': [20 - 35],
+            'steel-stainless': [15 - 30],
+            'titanium': [10 - 25],
+            'zinc-die cast': [80 - 120]
+        }
+        pass
+
+    def torque_(self, stock_material, fit=True):
+        # https://www.parlec.com/Parlec/media/technical_specs/Tapping-Speeds-Torque-Requirements.pdf?ext=.pdf
+
+        arr = [
+            # Tap Size  Brass   Aluminum and Leaded Brass   200 BHN Steel   300 BHN Steel   400 BHN Steel   Approximate Breaking Torque
+            # #6 4 2 7 9 10 8
+            [0.13, 4, 2, 7, 9, 10, 8],
+            # #8 4.5 2.25 8 10 11 30
+            [0.16, 4.5, 2.25, 8, 10, 11, 30],
+            # #10 8.5 4.25 15 19 21 42
+            [0.19, 8.5, 4.25, 15, 19, 21, 42],
+            # 1/4 16 8 28 36 40 106
+            [1 / 4., 16, 8, 28, 36, 40, 106],
+            # 5/16 24 12 42 54 60 180
+            [5 / 16., 24, 12, 42, 54, 60, 180],
+            # 3/8 37 18.5065 83 93 240
+            [3 / 8., 37, 18.50, 65, 83, 93, 240],
+            # 7/16 54 27 94.5 122 135 500
+            [7 / 16., 54, 27, 94.5, 122, 135, 500],
+            # 1/2 68 34 119 153 170 700
+            [1 / 2., 68, 34, 119, 153, 170, 700],
+            # 9/16 88 44 154 198 220 850
+            [9 / 16., 88, 44, 154, 198, 220, 850],
+            # 5/8 119 59.50 208 268 298 1000
+            [5 / 8., 119, 59.50, 208, 268, 298, 1000],
+            # 3/4 170 85 298 383 425 1500
+            [3 / 4., 170, 85, 298, 383, 425, 1500],
+            # 7/8 238 119 416 536 595 2100
+            [7 / 8., 238, 119, 416, 536, 595, 2100],
+            # 1 337 168.50 590 758 842 2700
+            [1., 337, 168.50, 590, 758, 842, 2700],
+            # 1 1/4 544 277 970 1246 1385 3000+
+            [1 + 1 / 4., 544, 277, 970, 1246, 1385, 3000],
+            # 1 1/2 850 425 1488 1912 2125 3000+
+            [1 + 1 / 2., 850, 425, 1488, 1912, 2125, 3000],
+            # 1 3/4 1411 706 2471 3177 3530 3000+
+            [1 + 3 / 4., 1411, 706, 2471, 3177, 3530, 3000],
+            # 2 1904 952 3332 4284 4760 3000+
+            [2., 1904, 952, 3332, 4284, 4760, 3000],
+            # 2 1/4 2159 1080 3780 4860 5400 3000+
+            [2 + 1 / 4., 2159, 1080, 3780, 4860, 5400, 3000],
+            # 2 1/2 2975 1488 5208 6996 7440 3000+
+            [2 + 1 / 2., 2975, 1488, 5208, 6996, 7440, 3000]
+        ]
+
+        # Are these fine threads?
+        # 2 - 8 533 267 933 1199 1333 3000+
+        # 2 1/2 - 8 663 332 1160 1492 1658 3000+
+        # 3 - 8 1139 570 1995 2565 2850 3000+
+        # 4 -  8 1411 706 2471 3177 3530 3000+
+        # 5 - 8 1768 884 3094 3978 4420 3000+
+        # 6 - 8 2125 1063 3720 4784 5315 3000+
+
+        # All values in table above are in inch/Ibs. Approximate values based on sharp, 4 Flute coarse pitch hand taps at 65% thread height. Dull taps require approximately 50% more torque. For 55% and 75% thread heights, multiply above values by .75 and 1.25 respectively. Torque values for helical flute taps are approximately 70% of those shown. Torque values for chip drive taps are approximately 60% of those shown. Torque values for fine pitch threads are approximately 50% of those show
+
+        diam = self.diameter
+
+        diam_in_ = [x[0] for x in arr]
+        torque_ = []
+        if isinstance(stock_material, MaterialAluminum):
+            torque_ = [x[2] for x in arr]
+        elif isinstance(stock_material, MaterialSteelMild):
+            torque_ = [x[3] for x in arr]
+        elif isinstance(stock_material, MaterialSteelMedium):
+            torque_ = [x[4] for x in arr]
+        elif isinstance(stock_material, MaterialSteelHigh):
+            raise ToolIncompatibleMaterial('hss tool vs. tool steel')
+        else:
+            raise ToolIncompatibleMaterial('unknown material')
+
+        diam_in = [Q_(x, 'inch') for x in diam_in_]
+        torque = [Q_(x, 'inch lbf') for x in torque_]
+
+        # print(diam_in)
+        v = None
+        if diam < diam_in[0]:
+            v = torque[0]
+        elif diam >= diam_in[-1]:
+            v = torque[-1]
+        else:
+            if fit:
+                import numpy.polynomial.polynomial as poly
+                deg = 4
+                coef, (residuals, rank, singular_values, rcond) = poly.polyfit(diam_in_, torque_, deg, full=True)
+                # print(coef, residuals[0])
+                # Convert to inches, which are the units of the regressed source data. Then select magnitude of
+                # measurement, else the calculated values will be in terms of [inch]^rank, the rank of the
+                # fitted polynomial. Finally, add units in/turn to calculated ipr value.
+                v = Q_(poly.polyval(diam.to('inch').magnitude, coef), 'inch lbf')
+            else:
+                for i in range(len(diam_in) - 1):
+                    # print(i, diam_in[i], diam_in[i+1])
+                    if diam_in[i] <= diam <= diam_in[i + 1]:
+                        x = diam
+                        x1, x2 = diam_in[i:i + 2]
+                        y1, y2 = torque[i:i + 2]
+                        y = (x - x1) / (x2 - x1) * (y2 - y1) + y1
+                        v = y
+                        break
+        return v.to('newton meter')
+
+    def torque(self, stock_material, fit=True):
+        return self.torque_(stock_material, fit=fit)
+
+    def sfm(self, stock_material):
+        return self.speed(stock_material)
+
+    @classmethod
+    def plot_torque(cls, stock_material, highlight=None):
+        x = np.linspace(0, 2.5, 100) * ureg.inch
+
+        def f(diam, fit):
+            d = cls(diam)
+            v = d.torque(stock_material, fit)
+            return v
+
+        y1 = [f(x_, False).magnitude for x_ in x]
+        y2 = [f(x_, True).magnitude for x_ in x]
+        pylab.title('Required Torque', fontsize=16.)
+        pylab.xlabel('tap size [in]')
+        # pylab.ylabel('torque [in.lbs]')
+        # pylab.ylabel('torque [in.lbf]')
+        pylab.ylabel('torque [N.m]')
+        pylab.xlim(0, 2.5)
+        pylab.plot(x, y1, label='linear regression')
+        pylab.plot(x, y2, label='polynomial regression')
+        if highlight is not None:
+            if not (isinstance(highlight, list) or isinstance(highlight, tuple)):
+                highlight = [highlight]
+            for v in highlight:
+                v = v.to('newton meter').magnitude
+                pylab.axhline(y=v, color='#ff3333ee', label=f'torque = {v:.1f}')
+        pylab.yscale('log')
+        pylab.ylim(bottom=0)
+        pylab.legend()
+        pylab.show()

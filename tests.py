@@ -27,6 +27,8 @@ def test_drilling_range():
     pm.DrillHSS.plot_feedrate(stock_material)
     pm.DrillHSS.plot_thrust(stock_material, highlight=m.max_feed_force)
 
+    pm.Tap.plot_torque(stock_material, highlight=[Q_(2.6, 'newton meter'), Q_(7.2, 'newton meter')])
+
     do_once = True
     x = []
     y1 = []
