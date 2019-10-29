@@ -1,5 +1,5 @@
-from pymachining.base import *
-from pymachining.units import *
+from .base import *
+from .units import *
 
 
 class MachineType(PyMachiningBase):

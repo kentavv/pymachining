@@ -1,6 +1,6 @@
-from pymachining.base import *
-from pymachining.units import *
-from pymachining.tool_materials import *
+from .base import *
+from .units import *
+from .tool_materials import *
 
 
 class MaterialUnknown(PyMachiningException):

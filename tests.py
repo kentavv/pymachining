@@ -3,7 +3,7 @@ import numpy as np
 import pylab
 
 import pymachining as pm
-from pymachining import ureg, Q_
+from pymachining import Q_
 
 
 def test_drilling_range():

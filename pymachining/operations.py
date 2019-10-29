@@ -1,9 +1,9 @@
 import math
 
-from pymachining.base import *
-from pymachining.materials import *
-from pymachining.tools import *
-from pymachining.units import *
+from .base import *
+from .materials import *
+from .tools import *
+from .units import *
 
 
 class MachiningOp(PyMachiningBase):

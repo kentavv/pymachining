@@ -1,10 +1,10 @@
 import numpy as np
 import pylab
 
-from pymachining.base import *
-from pymachining.units import *
-from pymachining.materials import *
-from pymachining.tool_materials import *
+from .base import *
+from .units import *
+from .materials import *
+from .tool_materials import *
 
 
 class ToolIncompatibleMaterial(PyMachiningException):
