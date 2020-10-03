@@ -462,7 +462,7 @@ class DrillHSS(Drill):
         pylab.legend()
         pylab.show()
 
-    def thrust(self, stock_material, fit=True):
+    def thrust(self, stock_material, fit='poly'):
         # Trust numbers from:
         # http://www.drill-hq.com/products/multiple-heads/custom-heads/multiple-spindle-drilling-head-for-different-size-tooling/recommended-tool-speed-chart/
 
@@ -487,7 +487,7 @@ class DrillHSS(Drill):
         elif diam >= diam_in[-1]:
             v = thrust_lbs[-1]
         else:
-            if fit:
+            if fit == 'poly':
                 import numpy.polynomial.polynomial as poly
                 deg = 4
                 coef, (residuals, rank, singular_values, rcond) = poly.polyfit(diam_in_, thrust_lbs_, deg, full=True)
@@ -496,7 +496,7 @@ class DrillHSS(Drill):
                 # measurement, else the calculated values will be in terms of [inch]^rank, the rank of the
                 # fitted polynomial. Finally, add units in/turn to calculated ipr value.
                 v = Q_(poly.polyval(diam.to('inch').magnitude, coef), 'lbs')
-            else:
+            elif fit == 'linear':
                 for i in range(len(diam_in) - 1):
                     # print(i, diam_in[i], diam_in[i+1])
                     if diam_in[i] <= diam <= diam_in[i + 1]:
@@ -506,6 +506,9 @@ class DrillHSS(Drill):
                         y = (x - x1) / (x2 - x1) * (y2 - y1) + y1
                         v = y
                         break
+            else:
+                raise Exception('fit must be from [fit, linear]')
+
         return v
 
     def thrust2(self, stock_material, feed_rate):
@@ -538,8 +541,8 @@ class DrillHSS(Drill):
             v = d.thrust2(stock_material, fr)
             return v
 
-        y1 = [f(x_, False).magnitude for x_ in x]
-        y2 = [f(x_, True).magnitude for x_ in x]
+        y1 = [f(x_, 'linear').magnitude for x_ in x]
+        y2 = [f(x_, 'poly').magnitude for x_ in x]
         y3 = [f2(x_).magnitude for x_ in x]
         pylab.title('Feed thrust', fontsize=16.)
         pylab.xlabel('drill size [in]')
