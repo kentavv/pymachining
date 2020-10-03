@@ -541,16 +541,16 @@ class DrillHSS(Drill):
             v = d.thrust2(stock_material, fr)
             return v
 
-        y1 = [f(x_, 'linear').magnitude for x_ in x]
-        y2 = [f(x_, 'poly').magnitude for x_ in x]
-        y3 = [f2(x_).magnitude for x_ in x]
+        y1 = [f(x_, 'linear').m_as('lbs') for x_ in x]
+        y2 = [f(x_, 'poly').m_as('lbs') for x_ in x]
+        y3 = [f2(x_).m_as('lbs') for x_ in x]
         pylab.title('Feed thrust', fontsize=16.)
         pylab.xlabel('drill size [in]')
         pylab.ylabel('thrust [lbs]')
         pylab.xlim(0, 2.5)
-        pylab.plot(x, y1, label='linear regression')
-        pylab.plot(x, y2, label='polynomial regression')
-        pylab.plot(x, y3, label='calculated estimate')
+        pylab.plot(x.m_as('inch'), y1, label='linear regression')
+        pylab.plot(x.m_as('inch'), y2, label='polynomial regression')
+        pylab.plot(x.m_as('inch'), y3, label='calculated estimate')
         if highlight is not None:
             pylab.axhline(y=highlight.to('lbs').magnitude, color='#ff3333ee', label='max thrust')
         pylab.legend()
