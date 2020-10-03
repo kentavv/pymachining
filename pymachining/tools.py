@@ -717,8 +717,11 @@ class Tap(Tool):
         return self.speed(stock_material)
 
     @classmethod
-    def plot_torque(cls, stock_material, highlight=None):
-        x = np.linspace(0, 2.5, 100) * ureg.inch
+    def plot_torque(cls, stock_material, highlight=None, min_diam=0, max_diam=2.5, title=None):
+        if title is None:
+            title = 'Required Torque'
+
+        x = np.linspace(min_diam, max_diam, 100) * ureg.inch
 
         def f(diam, fit):
             d = cls(diam)
@@ -727,12 +730,12 @@ class Tap(Tool):
 
         y1 = [f(x_, False).magnitude for x_ in x]
         y2 = [f(x_, True).magnitude for x_ in x]
-        pylab.title('Required Torque', fontsize=16.)
+        pylab.title(title, fontsize=16.)
         pylab.xlabel('tap size [in]')
-        # pylab.ylabel('torque [in.lbs]')
-        # pylab.ylabel('torque [in.lbf]')
-        pylab.ylabel('torque [N.m]')
-        pylab.xlim(0, 2.5)
+        # pylab.ylabel('torque [in lbs]')
+        # pylab.ylabel('torque [in lbf]')
+        pylab.ylabel('torque [N m]')
+        pylab.xlim(min_diam, max_diam)
         pylab.plot(x, y1, label='linear regression')
         pylab.plot(x, y2, label='polynomial regression')
         if highlight is not None:
