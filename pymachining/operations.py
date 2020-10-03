@@ -569,7 +569,7 @@ class DrillOp(MachiningOp):
     @staticmethod
     @ureg.check('[length]', '[length] * turn / [time]')
     def rrpm_(cutter_diameter, speed):
-        rpm = speed / (cutter_diameter * math.pi)
+        rpm = (speed / (cutter_diameter * math.pi)).to('tpm')
         assert (rpm.check('turn / [time]'))
         return rpm
 
