@@ -1,6 +1,7 @@
 from .base import *
 from .units import *
 import math
+import pylab
 import numpy as np
 
 
@@ -76,10 +77,7 @@ class MachineType(PyMachiningBase):
         return (t * rpm / self.efficiency).to('watt') + self.idle_power
 
     def plot_torque_speed_curve(self, highlight_power=None, highlight_torque=None, highlight_rpm=None):
-        import pylab
-        import numpy as np
-
-        x = np.linspace(self.min_rpm, self.max_rpm / self.gear_ratio, 100) # * ureg.tpm
+        x = np.linspace(self.min_rpm, self.max_rpm / self.gear_ratio, 100)  # * ureg.tpm
         # y1 = np.vectorize(m.torque_continuous)(x)
         # y2 = np.vectorize(m.torque_intermittent)(x)
         # y1 = [m.torque_continuous(x_) for x_ in x]
@@ -163,6 +161,10 @@ class LatheMachine(MachineType):
 class MillingMachine(MachineType):
     def __init__(self):
         MachineType.__init__(self)
+        self.max_feed_force = 0 * ureg.lbs
+        self.max_z_rate = Q_(0, 'inch / min')
+        self.max_x_rate = Q_(0, 'inch / min')
+        self.max_y_rate = Q_(0, 'inch / min')
 
 
 class VerticalMillingMachine(MillingMachine):
@@ -191,6 +193,9 @@ class MachinePM25MV_LeadshineAxes(VerticalMillingMachine):
         # Measured using a Taylor 5559 BIA scale. Could not find a manual for specifications,
         # but Amazon description says "Accurate to 300 lbs" and "330 lb capacity reading to the 0.2 lb."
         self.max_feed_force = 300 * ureg.lbs
+        self.max_z_rate = Q_(100, 'inch / min')
+        self.max_x_rate = Q_(100, 'inch / min')
+        self.max_y_rate = Q_(100, 'inch / min')
 
 
 class MachinePM25MV(MachinePM25MV_LeadshineAxes):
@@ -306,7 +311,7 @@ class MachinePM25MV_HS(MachinePM25MV_LeadshineAxes):
             T = self._torque_y[0] * (ureg.newton * ureg.meter)
         elif Q_(18000, 'tpm') < abs_rpm < Q_(24000, 'tpm'):
             x_ = abs_rpm.to('turn / minute').magnitude
-            T = coeffs.dot([x_**2, x_, 1]) * (ureg.newton * ureg.meter)
+            T = coeffs.dot([x_ ** 2, x_, 1]) * (ureg.newton * ureg.meter)
         elif abs_rpm == Q_(24000, 'tpm'):
             T = Q_(self._torque_y[-1], 'newton meter')
         else:
