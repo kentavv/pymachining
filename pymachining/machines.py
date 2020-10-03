@@ -1,5 +1,7 @@
 from .base import *
 from .units import *
+import math
+import numpy as np
 
 
 class MachineType(PyMachiningBase):
@@ -77,14 +79,13 @@ class MachineType(PyMachiningBase):
         import pylab
         import numpy as np
 
-        x = np.linspace(self.min_rpm, self.max_rpm / self.gear_ratio, 100) * ureg.tpm
-
+        x = np.linspace(self.min_rpm, self.max_rpm / self.gear_ratio, 100) # * ureg.tpm
         # y1 = np.vectorize(m.torque_continuous)(x)
         # y2 = np.vectorize(m.torque_intermittent)(x)
         # y1 = [m.torque_continuous(x_) for x_ in x]
         # y2 = [m.torque_intermittent(x_) for x_ in x]
-        y1 = np.array([self.torque_continuous(x_).magnitude for x_ in x]) * (ureg.newton * ureg.meter)
-        y2 = np.array([self.torque_intermittent(x_).magnitude for x_ in x]) * (ureg.newton * ureg.meter)
+        y1 = np.array([self.torque_continuous(x_).to(ureg.newton * ureg.meter).magnitude for x_ in x]) * (ureg.newton * ureg.meter)
+        y2 = np.array([self.torque_intermittent(x_).to(ureg.newton * ureg.meter).magnitude for x_ in x]) * (ureg.newton * ureg.meter)
 
         fig, ax1 = pylab.subplots()
 
@@ -102,12 +103,12 @@ class MachineType(PyMachiningBase):
 
         lns = []
 
-        lns += ax1.plot(x, y1, color=colors[0], label='Continuous T')
-        lns += ax2.plot(x, y1 * x / 9.5488, color=colors[1], label='Continuous P')
+        lns += ax1.plot(x.magnitude, y1.magnitude, color=colors[0], label='Continuous T')
+        lns += ax2.plot(x.magnitude, (y1 * x / 9.5488).magnitude, color=colors[1], label='Continuous P')
 
         if self.torque_intermittent_define:
-            lns += ax1.plot(x, y2, color=colors[2], label='Intermittent T')
-            lns += ax2.plot(x, y2 * x / 9.5488, color=colors[3], label='Intermittent P')
+            lns += ax1.plot(x.magnitude, y2.magnitude, color=colors[2], label='Intermittent T')
+            lns += ax2.plot(x.magnitude, (y2 * x / 9.5488).magnitude, color=colors[3], label='Intermittent P')
 
         if highlight_power is not None:
             lns += [ax2.axhline(highlight_power.to('watt').magnitude, color=colors[4], label='Requested P')]
@@ -169,14 +170,36 @@ class VerticalMillingMachine(MillingMachine):
         MillingMachine.__init__(self)
 
 
-class MachinePM25MV(VerticalMillingMachine):
+class MachinePM25MV_LeadshineAxes(VerticalMillingMachine):
     def __init__(self):
         VerticalMillingMachine.__init__(self)
+        self.name = 'PM25MV Leadshine'
+        self.description = 'PM25MV milling machine Leadshine'
+        # 300 lbs is the measured force, but the scale limit may have been exceeded.
+        # The speed-torque curve of the Leadshine ES-32320-S Easy Servo Motor shows
+        # the motor produces 1.8 Nm up to 360 RPM (with default holding current percentage
+        # of 40%; increasing this percentage improves torque at higher RPMs).
+        # David Clements' PM25-CNC kit uses 5mm pitch (5.08 TPI) ballscrews.
+        # Converting the torque to a linear force:
+        # F = T * 2Pi * (gear ratio) * (%eff) / (lead pitch)
+        #
+        # >>> Q_(1.8, 'newton meter') * 2 * math.pi * 1 * .95 / Q_(5, 'mm')
+        # 2148.8493750554185 <Unit('newton')>
+        # >>> (Q_(1.8, 'newton meter') * 2 * math.pi * 1 * .95 / Q_(5, 'mm')).to('lbf')
+        # 483.080556886682 <Unit('force_pound')>
+        #
+        # Measured using a Taylor 5559 BIA scale. Could not find a manual for specifications,
+        # but Amazon description says "Accurate to 300 lbs" and "330 lb capacity reading to the 0.2 lb."
+        self.max_feed_force = 300 * ureg.lbs
+
+
+class MachinePM25MV(MachinePM25MV_LeadshineAxes):
+    def __init__(self):
+        MachinePM25MV_LeadshineAxes.__init__(self)
         self.max_rpm = Q_(2500, 'turn / min')
         self.min_rpm = Q_(100, 'turn / min')
         self.name = 'PM25MV'
         self.description = 'PM25MV milling machine'
-        self.max_feed_force = Q_(100, 'lbs')
 
     # I have no information on the actual torque-speed curve; these are guesses.
 
@@ -199,30 +222,14 @@ class MachinePM25MV(VerticalMillingMachine):
         return self._torque_continuous(rpm)
 
 
-class MachinePM25MV_DMMServo(VerticalMillingMachine):
+class MachinePM25MV_DMMServo(MachinePM25MV_LeadshineAxes):
     def __init__(self):
-        VerticalMillingMachine.__init__(self)
+        MachinePM25MV_LeadshineAxes.__init__(self)
         self.max_rpm = Q_(5000, 'turn / min')
         self.min_rpm = Q_(10, 'turn / min')
         self.name = 'PM25MV_DMMServo'
         self.description = 'PM25MV milling machine with DMM 86M Servo'
         self.torque_intermittent_define = True
-        # 300 lbs is the measured force, but the scale limit may have been exceeded.
-        # The speed-torque curve of the Leadshine ES-32320-S Easy Servo Motor shows
-        # the motor produces 1.8 Nm up to 360 RPM (with default holding current percentage
-        # of 40%; increasing this percentage improves torque at higher RPMs).
-        # David Clements' PM25-CNC kit uses 5mm pitch (5.08 TPI) ballscrews.
-        # Converting the torque to a linear force:
-        # F = T * 2Pi * (gear ratio) * (%eff) / (lead pitch)
-        #
-        # >>> Q_(1.8, 'newton meter') * 2 * math.pi * 1 * .95 / Q_(5, 'mm')
-        # 2148.8493750554185 <Unit('newton')>
-        # >>> (Q_(1.8, 'newton meter') * 2 * math.pi * 1 * .95 / Q_(5, 'mm')).to('lbf')
-        # 483.080556886682 <Unit('force_pound')>
-        #
-        # Measured using a Taylor 5559 BIA scale. Could not find a manual for specifications,
-        # but Amazon description says "Accurate to 300 lbs" and "330 lb capacity reading to the 0.2 lb."
-        self.max_feed_force = 300 * ureg.lbs
 
     # A - Continuous duty		B - Intermittent duty
     # Y	X	Y	X
@@ -269,3 +276,40 @@ class MachinePM25MV_DMMServo(VerticalMillingMachine):
             T = Q_(0, 'newton meter')
 
         return T
+
+class MachinePM25MV_HS(MachinePM25MV_LeadshineAxes):
+    def __init__(self):
+        MachinePM25MV_LeadshineAxes.__init__(self)
+        self.max_rpm = Q_(24000, 'turn / min')
+        self.min_rpm = Q_(9000, 'turn / min')
+        self.name = 'PM25MV_2.2kW24kRPM'
+        self.description = 'PM25MV milling machine with 2.2kW24kRPM'
+        self.torque_intermittent_define = True
+
+    def _torque_both(self, abs_rpm):
+        # Data sampled from the torque-speed curve of a similar spindle
+        # https://www.damencnc.com/en/electrospindel-c41-47-c-db-p-er25-hy-2-2kw-18-000-24-000rpm/a14?c=32#gallery-3
+        # using
+        # https://apps.automeris.io/wpd/
+        x = [17985.882352941175, 20992.941176470587, 22983.529411764703, 23999.999999999996]
+        y = [1.0622589531680442, 0.9107438016528927, 0.8308539944903582, 0.7977961432506888]
+        coeffs = np.polyfit(x, y, 2)
+
+        if Q_(0, 'tpm') <= abs_rpm <= Q_(18000, 'tpm'):
+            T = y[0] * (ureg.newton * ureg.meter)
+        elif Q_(18000, 'tpm') < abs_rpm < Q_(24000, 'tpm'):
+            x_ = abs_rpm.to('turn / minute').magnitude
+            T = coeffs.dot([x_**2, x_, 1]) * (ureg.newton * ureg.meter)
+        elif abs_rpm == Q_(24000, 'tpm'):
+            T = Q_(y[-1], 'newton meter')
+        else:
+            T = Q_(0, 'newton meter')
+
+        return T
+
+    def _torque_continuous(self, abs_rpm):
+        return self._torque_both(abs_rpm)
+
+    def _torque_intermittent(self, abs_rpm):
+        # The VFD can increase torque, briefly, up to seemingly 200%
+        return self._torque_both(abs_rpm) * 1.2
