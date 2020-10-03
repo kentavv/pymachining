@@ -299,7 +299,8 @@ class DrillOp(MachiningOp):
     def torque_(net_power, spindle_speed):
         P_c = net_power
         n = spindle_speed
-        M_c = (P_c * 30 * 10 ** 3) / (math.pi * n)
+        # M_c = (P_c * 30 * 10 ** 3) / (math.pi * n)
+        M_c = (P_c / n).to('N m')
         return M_c  # N m
 
     @staticmethod
