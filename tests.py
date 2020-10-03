@@ -3,12 +3,11 @@ import numpy as np
 import pylab
 
 import pymachining as pm
-from pymachining import Q_
+
+Q_ = pm.getQ()
 
 
-def test_drilling_range():
-    stock_material = pm.Material('aluminum')
-
+def test_drill1(stock_material):
     cutter_diameter = Q_(12.7, 'mm')
     drill = pm.DrillHSS(cutter_diameter)
 
@@ -21,14 +20,27 @@ def test_drilling_range():
     P = drill_op.net_power(feed_per_revolution, spindle_rpm)
     print(feed_per_revolution, spindle_rpm, P, sep='\n')
 
-    m = pm.MachinePM25MV_DMMServo()
+
+def test_drill2(m, stock_material):
+    cutter_diameter = Q_(12.7, 'mm')
+    drill = pm.DrillHSS(cutter_diameter)
+
+    drill_op = pm.DrillOp(drill, stock_material)
+
+    feed_per_revolution = drill.feed_rate(stock_material)
+    sfm = stock_material.sfm()
+    spindle_rpm = drill_op.rrpm(sfm)
+
+    P = drill_op.net_power(feed_per_revolution, spindle_rpm)
+    print(feed_per_revolution, spindle_rpm, P, sep='\n')
+
     m.plot_torque_speed_curve(highlight_power=P, highlight_rpm=spindle_rpm)
 
     pm.DrillHSS.plot_feedrate(stock_material)
     pm.DrillHSS.plot_thrust(stock_material, highlight=m.max_feed_force)
 
-    pm.Tap.plot_torque(stock_material, highlight=[Q_(2.6, 'newton meter'), Q_(7.2, 'newton meter')])
 
+def test_drill3(m, stock_material):
     do_once = True
     x = []
     y1 = []
@@ -126,12 +138,32 @@ def test_drilling_range():
     fig.tight_layout()
     pylab.show()
 
-    # pylab.legend()
-    # pylab.show()
+
+def test_drilling_range(m, stock_material):
+    test_drill1(stock_material)
+    test_drill2(m, stock_material)
+    test_drill3(m, stock_material)
+
+
+def test_tap(m, stock_material):
+    title = f'Required Tap Torque in {stock_material.name}'
+    pm.Tap.plot_torque(stock_material, title=title, highlight=m.torque_range())
+    pm.Tap.plot_torque(stock_material, title=title, highlight=m.torque_range(), min_diam=0, max_diam=.75)
 
 
 def main():
-    test_drilling_range()
+    # m = pm.MachinePM25MV_DMMServo()
+    m = pm.MachinePM25MV_HS()
+
+    m.plot_torque_speed_curve()
+
+    stock_material = pm.Material('aluminum')
+
+    # test_drilling_range(m, stock_material)
+    test_tap(m, stock_material)
+
+    test_tap(m, pm.Material('aluminum'))
+    test_tap(m, pm.Material('steel-mild'))
 
 
 if __name__ == "__main__":
