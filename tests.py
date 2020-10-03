@@ -77,17 +77,14 @@ def test_drill3(m, stock_material):
             do_once = False
         print(' '.join(f'{x.magnitude:.4f}' for x in row))
 
-        x += [diam]
-        y1 += [P.magnitude]
-        y2 += [p_c.magnitude]
         ax += [diam]
         ay1 += [spindle_rpm.magnitude]
         ay2 += [feed_per_revolution.magnitude]
         ay3 += [P.magnitude]
         ay4 += [p_c.magnitude]
 
-    pylab.plot(x, y1, label='Requested power')
-    pylab.plot(x, y2, label='Available power')
+    pylab.plot(ax, ay3, label='Requested power')
+    pylab.plot(ax, ay4, label='Available power')
     pylab.title('Drilling Power Demands')
     pylab.xlabel('Drill diameter [inch]')
     pylab.ylabel('Power [watt]')
@@ -158,12 +155,10 @@ def main():
     m.plot_torque_speed_curve()
 
     stock_material = pm.Material('aluminum')
+    # stock_material = pm.Material('steel-mild')
 
-    # test_drilling_range(m, stock_material)
-    test_tap(m, stock_material)
-
-    test_tap(m, pm.Material('aluminum'))
-    test_tap(m, pm.Material('steel-mild'))
+    test_drilling_range(m, stock_material)
+    # test_tap(m, stock_material)
 
 
 if __name__ == "__main__":
