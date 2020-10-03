@@ -221,6 +221,9 @@ class MachinePM25MV(MachinePM25MV_LeadshineAxes):
     def _torque_intermittent(self, rpm):
         return self._torque_continuous(rpm)
 
+    def torque_range(self):
+        return [Q_(0, 'newton meter'), Q_(2.85, 'newton meter')]
+
 
 class MachinePM25MV_DMMServo(MachinePM25MV_LeadshineAxes):
     def __init__(self):
@@ -277,6 +280,10 @@ class MachinePM25MV_DMMServo(MachinePM25MV_LeadshineAxes):
 
         return T
 
+    def torque_range(self):
+        return [Q_(2.6, 'newton meter'), Q_(7.2, 'newton meter')]
+
+
 class MachinePM25MV_HS(MachinePM25MV_LeadshineAxes):
     def __init__(self):
         MachinePM25MV_LeadshineAxes.__init__(self)
@@ -285,23 +292,23 @@ class MachinePM25MV_HS(MachinePM25MV_LeadshineAxes):
         self.name = 'PM25MV_2.2kW24kRPM'
         self.description = 'PM25MV milling machine with 2.2kW24kRPM'
         self.torque_intermittent_define = True
+        self._torque_x = [17985.882352941175, 20992.941176470587, 22983.529411764703, 23999.999999999996]
+        self._torque_y = [1.0622589531680442, 0.9107438016528927, 0.8308539944903582, 0.7977961432506888]
 
     def _torque_both(self, abs_rpm):
         # Data sampled from the torque-speed curve of a similar spindle
         # https://www.damencnc.com/en/electrospindel-c41-47-c-db-p-er25-hy-2-2kw-18-000-24-000rpm/a14?c=32#gallery-3
         # using
         # https://apps.automeris.io/wpd/
-        x = [17985.882352941175, 20992.941176470587, 22983.529411764703, 23999.999999999996]
-        y = [1.0622589531680442, 0.9107438016528927, 0.8308539944903582, 0.7977961432506888]
-        coeffs = np.polyfit(x, y, 2)
+        coeffs = np.polyfit(self._torque_x, self._torque_y, 2)
 
         if Q_(0, 'tpm') <= abs_rpm <= Q_(18000, 'tpm'):
-            T = y[0] * (ureg.newton * ureg.meter)
+            T = self._torque_y[0] * (ureg.newton * ureg.meter)
         elif Q_(18000, 'tpm') < abs_rpm < Q_(24000, 'tpm'):
             x_ = abs_rpm.to('turn / minute').magnitude
             T = coeffs.dot([x_**2, x_, 1]) * (ureg.newton * ureg.meter)
         elif abs_rpm == Q_(24000, 'tpm'):
-            T = Q_(y[-1], 'newton meter')
+            T = Q_(self._torque_y[-1], 'newton meter')
         else:
             T = Q_(0, 'newton meter')
 
@@ -311,5 +318,9 @@ class MachinePM25MV_HS(MachinePM25MV_LeadshineAxes):
         return self._torque_both(abs_rpm)
 
     def _torque_intermittent(self, abs_rpm):
-        # The VFD can increase torque, briefly, up to seemingly 200%
+        # The VFD can increase torque, briefly, up to seemingly 200%, depending
+        # on VFD settings, but lets conservatively estimate 120%.
         return self._torque_both(abs_rpm) * 1.2
+
+    def torque_range(self):
+        return [Q_(np.min(self._torque_y), 'newton meter'), Q_(np.max(self._torque_y), 'newton meter')]
