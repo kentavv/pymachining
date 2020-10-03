@@ -10,26 +10,28 @@ class MaterialUnknown(PyMachiningException):
 
 
 def Material(material_name):
-    if material_name.lower() in ['aluminum', '6061']:
-        return MaterialAluminum()
-    elif material_name.lower() in ['steel', 'steel-mild', '12l14']:
+    x = material_name.lower()
+    if x in ['aluminum', '6061']:
+        return MaterialAluminum(x)
+    elif x in ['steel', 'steel-mild', '12l14']:
         # low-carbon steel, 0.04% to 0.30% carbon
         # related, free-machining steels are steels that easily produce chips
-        return MaterialSteelMild()
-    elif material_name.lower() in ['steel-medium']:
+        return MaterialSteelMild(x)
+    elif x in ['steel-medium']:
         # medium-carbon steel, 0.31% to 0.60% carbon
-        return MaterialSteelMedium()
-    elif material_name.lower() in ['steel-high']:
+        return MaterialSteelMedium(x)
+    elif x in ['steel-high']:
         # high-carbon steel, tool steel, 0.61% to 1.50% carbon
-        return MaterialSteelHigh()
+        return MaterialSteelHigh(x)
     else:
         raise MaterialUnknown(material_name)
 
 
 class MaterialType(PyMachiningBase):
-    def __init__(self):
+    def __init__(self, name=None):
         PyMachiningBase.__init__(self)
         self.description = 'Unknown material'
+        self.name = name
         self.specific_cutting_force = float('inf')
         self.specific_cutting_energy = float('inf')
 
@@ -50,8 +52,8 @@ class MaterialType(PyMachiningBase):
 
 
 class MaterialAluminum(MaterialType):
-    def __init__(self):
-        MaterialType.__init__(self)
+    def __init__(self, name=None):
+        MaterialType.__init__(self, name)
         self.description = 'Aluminum material'
         self.specific_cutting_force = float('inf')
 
@@ -152,15 +154,15 @@ class MaterialAluminum(MaterialType):
 
 
 class MaterialSteel(MaterialType):
-    def __init__(self):
-        MaterialType.__init__(self)
+    def __init__(self, name=None):
+        MaterialType.__init__(self, name)
         self.description = 'Unknown steel material'
         self.specific_cutting_force = float('inf')
 
 
 class MaterialSteelMild(MaterialSteel):
-    def __init__(self):
-        MaterialSteel.__init__(self)
+    def __init__(self, name=None):
+        MaterialSteel.__init__(self, name)
         self.description = 'Steel, low-carbon steel, 0.04% to 0.30% carbon, material'
 
         # From Metal Cutting Theory and Practice, Table 2.1, Steels-soft row
@@ -189,8 +191,8 @@ class MaterialSteelMild(MaterialSteel):
 
 
 class MaterialSteelMedium(MaterialSteel):
-    def __init__(self):
-        MaterialSteel.__init__(self)
+    def __init__(self, name=None):
+        MaterialSteel.__init__(self, name)
         self.description = 'Steel, medium-carbon steel, 0.31% to 0.60% carbon, material'
 
         # From Metal Cutting Theory and Practice, Table 2.1, Steels-0<Rc<45 row
@@ -219,8 +221,8 @@ class MaterialSteelMedium(MaterialSteel):
 
 
 class MaterialSteelHigh(MaterialSteel):
-    def __init__(self):
-        MaterialSteel.__init__(self)
+    def __init__(self, name=None):
+        MaterialSteel.__init__(self, name)
         self.description = 'Steel, high-carbon steel, 0.61% to 1.50% carbon, tool steel, material'
 
         # From Metal Cutting Theory and Practice, Table 2.1, Steels-50<Rc<60 row
