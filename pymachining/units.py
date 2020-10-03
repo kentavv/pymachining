@@ -3,14 +3,45 @@ import pint
 # Units defined in Pint are browsable at
 # https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 
-ureg = pint.UnitRegistry(auto_reduce_dimensions=True)
+# Turn is defined as 2 * π and dimensionless in Pint. When auto_reduce_dimensions=True
+# the 2π makes its way into the quantity value in unexpected ways. Autoconvert_offset_to_baseunit=True
+# seems better in some cases. For now, just leave both disabled, and simplify the quantity before printing it.
+#
+# TODO Added testcases verifying expected units and values.
+#
 
-# ureg.rpm is already defined as [revolution/minute] = [2Pi turn/minute]
+# ureg = None
+# Q_ = None
+
+ureg = pint.UnitRegistry(auto_reduce_dimensions=False, autoconvert_offset_to_baseunit=False)
+# ureg.rpm is already defined as [revolution/minute] = [2Pi/minute]
 # To avoid error prone scaling by 2Pi, define [tpm] = [1 turn/minute]
+# (but one turn = 2Pi..., I think a lot the problems with the definition of turn came from 
+# auto_reduce_dimensions=True and turn, or radian in particular, being dimensionless. Tpm
+# can problem be replaced now with Pint's RPM.)
 
 ureg.define('tpm = turn / minute')
 ureg.define('tps = turn / second')
+# ureg.define('tpm = turn / minute / (2 * π)')
+# ureg.define('tps = turn / second / (2 * π)')
 Q_ = ureg.Quantity
+
+
+# There must only be a single UnitRegistry per application. These were attempts at that.
+# Much of the problems while using Jupyter, modifying pymachining, and whatever auto_reload was doing.# def createUreg():
+#     ureg = pint.UnitRegistry(auto_reduce_dimensions=False, autoconvert_offset_to_baseunit=False)
+#     return ureg
+
+def setUreg(ureg_):
+    global ureg, Q_
+    ureg = ureg_
+    ureg.define('tpm = turn / minute')
+    ureg.define('tps = turn / second')
+    Q_ = ureg.Quantity
+
+
+def getQ():
+    return Q_
 
 # But turn is also defined in terms of radians
 # From default_en.txt:
