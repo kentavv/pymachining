@@ -72,6 +72,7 @@ class MaterialAluminum(MaterialType):
 
     def sfm(self, tool_material=None):
         if tool_material is None:
+            print('Warning: Assuming HSS tooling while calculating SFM')
             tool_material = ToolMaterialHSS()
 
         # Aluminum and its Alloys
@@ -79,7 +80,7 @@ class MaterialAluminum(MaterialType):
             sfm_range = [200, 300]
         elif isinstance(tool_material, ToolMaterialCarbide):
             sfm_range = [1200, 1200]
-            # The upper limit could be max(1200, spindle.max_rpm)
+            # The upper limit could be max(1200, f(spindle.max_rpm, ...))
 
         v = Q_((sfm_range[0] + sfm_range[1]) / 2., 'feet tpm')
         v = Q_(sfm_range[0], 'feet tpm')
@@ -173,6 +174,7 @@ class MaterialSteelMild(MaterialSteel):
 
     def sfm(self, tool_material=None):
         if tool_material is None:
+            print('Warning: Assuming HSS tooling while calculating SFM')
             tool_material = ToolMaterialHSS()
 
         # Values from https://www.autodesk.com/products/fusion-360/blog/speeds-feeds-new-cnc-machinists/
@@ -203,6 +205,7 @@ class MaterialSteelMedium(MaterialSteel):
 
     def sfm(self, tool_material=None):
         if tool_material is None:
+            print('Warning: Assuming HSS tooling while calculating SFM')
             tool_material = ToolMaterialHSS()
 
         # Values from https://www.autodesk.com/products/fusion-360/blog/speeds-feeds-new-cnc-machinists/
@@ -233,6 +236,7 @@ class MaterialSteelHigh(MaterialSteel):
 
     def sfm(self, tool_material=None):
         if tool_material is None:
+            print('Warning: Assuming HSS tooling while calculating SFM')
             tool_material = ToolMaterialHSS()
 
         # Values from https://www.autodesk.com/products/fusion-360/blog/speeds-feeds-new-cnc-machinists/
