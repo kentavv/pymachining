@@ -1,12 +1,58 @@
 #!/usr/bin/env python3.8
 
+import sys
+import urllib.parse
+import io
+import cgi
 import numpy as np
 import pymachining as pm
 
 Q_ = pm.getQ()
 
 
-def drill_assistant(m, material_name, drill_diam, depth, generate_graphs=False):
+def drill_assistant_header():
+    print('''
+  <form action="/pymachining/assistant_cgi.py">
+    <label for="machine">Machine:</label>
+    <select id="machine" name="machine">
+      <option value="PM25MV">PM25MV</option>
+      <option value="PM25MV_DMMServo">PM25MV DMMServo</option>
+      <option value="PM25MV_HS">PM25MV HS</option>
+    </select>
+
+    <label for="stock_mat">Stock material:</label>
+    <select id="stock_mat" name="stock_mat">
+      <option value="aluminum">Aluminum</option>
+      <option value="6061">Aluminum - 6061</option>
+      <option value="steel">Steel</option>
+      <option value="steel-mild">Steel mild</option>
+      <option value="12l14">12L14</option>
+      <option value="steel-medium">Steel medium</option>
+      <option value="steel-high">Steel high</option>
+    </select>
+
+    <label for="tool_mat">Tool material:</label>
+    <select id="tool_mat" name="tool_mat">
+      <option value="hss">HSS</option>
+      <option value="carbide">Carbide</option>
+    </select>
+
+    <label for="input_units">Input units:</label>
+    <select id="input_units" name="input_units">
+      <option value="metric">Metric</option>
+      <option value="imperial">Imperial</option>
+    </select>
+
+    <label for="output_units">Output units:</label>
+    <select id="output_units" name="output_units">
+      <option value="metric">Metric</option>
+      <option value="imperial">Imperial</option>
+    </select>
+  </form>
+''')
+
+
+def drill_assistant(m, material_name, drill_diam, depth, output_units, generate_graphs=False):
     stock_material = pm.Material(material_name)
     tool = pm.DrillHSSStub(drill_diam)
     op = pm.DrillOp(tool, stock_material)
@@ -14,11 +60,11 @@ def drill_assistant(m, material_name, drill_diam, depth, generate_graphs=False):
     sfm = stock_material.sfm(tool.tool_material)
     material_sfm = sfm
 
-    print('Operation:')
-    print('', stock_material)
-    print('  SFM:', material_sfm)
-    print('', tool)
-    print('', op)
+    print('<h1>Drilling operation</h1>')
+    print(stock_material)
+    print('  SFM:', material_sfm, '<br>')
+    print(tool)
+    print(op)
 
     feed_per_revolution = tool.feed_rate(stock_material)
     max_spindle_rpm = m.max_rpm
@@ -62,106 +108,169 @@ def drill_assistant(m, material_name, drill_diam, depth, generate_graphs=False):
     def per_warning(v):
         return ' (!!!)' if t_ >= 100 else ' (!!)' if t_ >= 90 else ' (!)' if t_ >= 80 else ''
 
-    print('\nMachining parameters:')
-    print(' Supplied to F360:')
+    print('<h2>Machining parameters</h2>')
+    print(' Supplied to F360<br>')
     if spindle_limited:
-        print(f'  Spindle RPM (limited): {spindle_rpm:.2f}')
+        print(f'  Spindle RPM (limited): {spindle_rpm:.2f}<br>')
     else:
         t_ = (sfm / material_sfm).m_as('') * 100
-        print(f'  Surface speed ({t_:.1f}%): {sfm:.2f}')
-    print(f'  Feed per revolution: {feed_per_revolution.to("inch / turn"):.4f} {feed_per_revolution.to("mm / turn"):.4f}')
-    print(' Calculated by F360:')
+        print(f'  Surface speed ({t_:.1f}%): {sfm:.2f}<br>')
+    print(f'  Feed per revolution: {feed_per_revolution.to("inch / turn"):.4f} {feed_per_revolution.to("mm / turn"):.4f}<br>')
+    print(' Calculated by F360:<br>')
     if spindle_limited:
         t_ = (sfm / material_sfm).m_as('') * 100
-        print(f'  Surface speed ({t_:.1f}%): {sfm:.2f} (limited by maximum spindle speed)')
+        print(f'  Surface speed ({t_:.1f}%): {sfm:.2f} (limited by maximum spindle speed)<br>')
     else:
         t_ = (spindle_rpm / max_spindle_rpm).m_as('') * 100
         ts_ = per_warning2(t_)
-        print(f'  Spindle RPM{ts_}: {spindle_rpm:.2f} (calculated by f360 using tool diam and sfm)')
+        print(f'  Spindle RPM{ts_}: {spindle_rpm:.2f} (calculated by f360 using tool diam and sfm)<br>')
     t_ = (plunge_feedrate / max_plunge_feedrate).m_as('') * 100
     ts_ = per_warning(t_)
     print(
-        f'  Plunge feedrate{ts_} ({t_:.1f}%): {plunge_feedrate.to("inch / minute"):.2f} {plunge_feedrate.to("mm / minute"):.2f} (calculated by f360 using feed/rev and spindle rpm)')
+        f'  Plunge feedrate{ts_} ({t_:.1f}%): {plunge_feedrate.to("inch / minute"):.2f} {plunge_feedrate.to("mm / minute"):.2f} (calculated by f360 using feed/rev and spindle rpm)<br>')
 
-    print('\nOperation analysis:')
+    print('<h2>Operation analysis</h2>')
     t_ = (depth / drill_diam).m_as('')
-    print(f' Cycle type:')
-    print(f'  D / diam: {t_:.2f}')
+    print(f' Cycle type:<br>')
+    print(f'  D / diam: {t_:.2f}<br>')
     if t_ < 4:
         print()
-        print('  Standard drilling may be fine.')
-        print('  Peck drilling may still be preferred to break chips.')
-        print('  One retraction before final breakthrough may be preferred to allow coolant to hole bottom.')
+        print('  Standard drilling may be fine.<br>')
+        print('  Peck drilling may still be preferred to break chips.<br>')
+        print('  One retraction before final breakthrough may be preferred to allow coolant to hole bottom.<br>')
         # Before the final breakthrough, there is minimal material remaining and the heat carrying capacity
         # of the stock is low.
 
-    print('\n Limited by:')
+    print('\n Limited by:<br>')
     if sfm > material_sfm:
-        print(f'  Warning: SFM ({sfm:.1f}) exceeds material SFM ({material_sfm:.1f})')
+        print(f'  Warning: SFM ({sfm:.1f}) exceeds material SFM ({material_sfm:.1f})<br>')
     t_ = False
     if spindle_limited:
-        print(f'  Limited by spindle RPM: requested spindle rpm {requested_spindle_rpm:.2f} changed to {spindle_rpm:.2f}')
+        print(f'  Limited by spindle RPM: requested spindle rpm {requested_spindle_rpm:.2f} changed to {spindle_rpm:.2f}<br>')
         t_ = True
     if torque_limited:
-        print('  Limited by spindle torque')
+        print('  Limited by spindle torque<br>')
         t_ = True
     if thrust_limited:
-        print('  Limited by thrust')
+        print('  Limited by thrust<br>')
         t_ = True
     if plunge_limited:
-        print('  Limited by plunge feedrate')
+        print('  Limited by plunge feedrate<br>')
         t_ = True
     if not t_:
-        print('  Not limited.')
+        print('  Not limited.<br>')
 
-    print('\n Machine demands:')
+    print('<h2>Machine demands</h2>')
     t_ = (thrust1 / max_thrust).m_as('') * 100
     ts_ = per_warning(t_)
-    print(f'  Thrust1{ts_}: {t_:.1f}% ({thrust1.to("pound"):.2f} {thrust1.to("kg"):.2f})')
+    print(f'  Thrust1{ts_}: {t_:.1f}% ({thrust1.to("pound"):.2f} {thrust1.to("kg"):.2f})<br>')
     t_ = (thrust2 / max_thrust).m_as('') * 100
     ts_ = per_warning(t_)
-    print(f'  Thrust2{ts_}: {t_:.1f}% ({thrust2.to("pound"):.2f} {thrust2.to("kg"):.2f})')
+    print(f'  Thrust2{ts_}: {t_:.1f}% ({thrust2.to("pound"):.2f} {thrust2.to("kg"):.2f})<br>')
     if spindle_limited:
-        print(f'  Spindle RPM (limited): {spindle_rpm:.2f}')
+        print(f'  Spindle RPM (limited): {spindle_rpm:.2f}<br>')
     else:
         t_ = (spindle_rpm / max_spindle_rpm).m_as('') * 100
         ts_ = per_warning2(t_)
-        print(f'  Spindle RPM{ts_}: {spindle_rpm:.2f}')
+        print(f'  Spindle RPM{ts_}: {spindle_rpm:.2f}<br>')
     t_ = (P / max_P).m_as('') * 100
     ts_ = per_warning(t_)
-    print(f'  Power{ts_}: {t_:.1f}% ({P.to("watt"):.2f})')
+    print(f'  Power{ts_}: {t_:.1f}% ({P.to("watt"):.2f})<br>')
     t_ = (T / max_T).m_as('') * 100
     ts_ = per_warning(t_)
-    print(f'  Torque{ts_}: {t_:.1f}% ({T.to("ft lbf"):.2f} {T.to("N m"):.2f})')
+    print(f'  Torque{ts_}: {t_:.1f}% ({T.to("ft lbf"):.2f} {T.to("N m"):.2f})<br>')
 
-    print('\n Efficiency:')
-    print(f'  Material removal rate: {Q.to("in^3 / min"):.2f} {Q.to("cm^3 / min"):.2f}')
-    print(f'  Minimal machining time: {op_time:.2f}')
-
-    print('\n')
+    print('\n Efficiency:<br>')
+    print(f'  Material removal rate: {Q.to("in^3 / min"):.2f} {Q.to("cm^3 / min"):.2f}<br>')
+    print(f'  Minimal machining time: {op_time:.2f}<br>')
 
     if generate_graphs:
         m.plot_torque_speed_curve(highlight_power=P, highlight_rpm=spindle_rpm)
         tool.plot_thrust(stock_material, highlight=m.max_feed_force)
 
 
-def test_assistants():
-    # m = pm.MachinePM25MV_DMMServo()
-    m = pm.MachinePM25MV_HS()
-
-    # Drill 1/4" hole into aluminum 1/2" deep:
-    gen_graphs = True
-    # drill_assistant(m, 'aluminum', Q_(.25, 'inch'), Q_(.5, 'inch'), gen_graphs)
-    drill_assistant(m, 'aluminum', Q_(6.7, 'mm'), Q_(.5, 'inch'), gen_graphs)
-    # drill_assistant(m, 'aluminum', Q_(.5, 'inch'), Q_(.5, 'inch'), gen_graphs)
-
-
-def main():
+def main(env, form):
     # What are the Fusion 360 settings for...
-    print('Content-Type: text/html')
-    print()
-    test_assistants()
+
+    machine = env['machine'] if 'machine' in env else None
+    stock_mat = env['stock_mat'] if 'stock_mat' in env else None
+    tool_mat = env['tool_mat'] if 'tool_mat' in env else None
+    input_units = env['input_units'] if 'input_units' in env else None
+    output_units = env['output_units'] if 'output_units' in env else None
+
+    if machine not in ['PM25MV', 'PM25MV_DMMServo', 'PM25MV_HS']:
+        machine = None
+
+    if stock_mat not in ['aluminum', '6061', 'steel', 'steel-mild', '12l14', 'steel-medium', 'steel-high']:
+        stock_mat = None
+
+    if tool_mat not in ['carbide', 'hss']:
+        tool_mat = None
+
+    if input_units not in ['metric', 'imperial']:
+        input_units = None
+
+    if output_units not in ['metric', 'imperial']:
+        output_units = None
+
+    if machine is not None and stock_mat is not None and tool_mat is not None and input_units is not None and output_units is not None:
+        print('<html>')
+        drill_assistant_header()
+
+        if machine == 'PM25MV':
+            m = pm.MachinePM25MV()
+        elif machine == 'PM25MV_DMMServo':
+            m = pm.MachinePM25MV_DMMServo()
+        elif machine == 'PM25MV_HS':
+            m = pm.MachinePM25MV_HS()
+        else:
+            m = None
+        if input_units == 'metric':
+            tool = Q_(6.7, 'mm')
+        else:
+            tool = Q_(6.7, 'inch')
+        if output_units == 'metric':
+            depth = Q_(0.5, 'mm')
+        else:
+            depth = Q_(0.5, 'inch')
+        gen_graphs = False
+        drill_assistant(m, stock_mat, tool, depth, output_units, gen_graphs)
+        print('</html>')
+    else:
+        print('<html>')
+        drill_assistant_header()
+        print('</html>')
+
+
+def application(environ, start_response):
+    status = '200 OK'
+
+    saved_stdout = sys.stdout
+
+    sys.stdout = io.StringIO()
+
+    d = urllib.parse.parse_qs(environ['QUERY_STRING'])
+    env = {k: v[0].strip() for k, v in d.items()}
+
+    request_body = environ['wsgi.input'].read()
+    d = urllib.parse.parse_qs(request_body)
+    form = {k.decode('utf-8'): v[0].decode('utf-8').strip() for k, v in d.items()}
+
+    main(env, form)
+    html = sys.stdout.getvalue()
+
+    sys.stdout = saved_stdout
+
+    response_header = [('Content-type', 'text/html')]
+    start_response(status, response_header)
+
+    return [html.encode('utf-8')]
 
 
 if __name__ == "__main__":
-    main()
+    env = {'machine': 'PM25MV_DMMServo',
+           'stock_mat': 'aluminum',
+           'tool_mat': 'hss',
+           'input_units': 'metric',
+           'output_units': 'imperial'}
+    main(env, [])
