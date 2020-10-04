@@ -1,4 +1,4 @@
-#!/home/dh_6i8v7b/.local/share/virtualenvs/pymachining-iAFu6bf3/bin/python3.8
+#!/usr/bin/env python3.8
 
 import numpy as np
 import pymachining as pm
