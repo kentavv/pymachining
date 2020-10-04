@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python
 
 import sys
 import urllib.parse
@@ -12,13 +12,21 @@ Q_ = pm.getQ()
 
 def drill_assistant_header():
     print('''
-  <form action="/pymachining/assistant_cgi.py">
+  <form action="/pymachining/assistant_cgi.py" method="post">
     <label for="machine">Machine:</label>
     <select id="machine" name="machine">
       <option value="PM25MV">PM25MV</option>
       <option value="PM25MV_DMMServo">PM25MV DMMServo</option>
       <option value="PM25MV_HS">PM25MV HS</option>
     </select>
+    <br>
+
+    <label for="operation">Operation:</label>
+    <select id="operation" name="operation">
+      <option value="drilling">Drilling</option>
+    </select>
+    <br>
+
 
     <label for="stock_mat">Stock material:</label>
     <select id="stock_mat" name="stock_mat">
@@ -30,24 +38,38 @@ def drill_assistant_header():
       <option value="steel-medium">Steel medium</option>
       <option value="steel-high">Steel high</option>
     </select>
+    <br>
 
     <label for="tool_mat">Tool material:</label>
     <select id="tool_mat" name="tool_mat">
       <option value="hss">HSS</option>
       <option value="carbide">Carbide</option>
     </select>
+    <br>
 
     <label for="input_units">Input units:</label>
     <select id="input_units" name="input_units">
       <option value="metric">Metric</option>
       <option value="imperial">Imperial</option>
     </select>
+    <br>
 
     <label for="output_units">Output units:</label>
     <select id="output_units" name="output_units">
       <option value="metric">Metric</option>
       <option value="imperial">Imperial</option>
     </select>
+    <br>
+
+    <label for="drill_diam">Drill diam:</label>
+    <input type="text" id="drill_diam" name="drill_diam" value="0.25">
+    <br>
+
+    <label for="hole_depth">Hole depth:</label>
+    <input type="text" id="hole_depth" name="hole_depth" value="0.5">
+    <br>
+
+    <input type="submit" value="Submit">
   </form>
 ''')
 
@@ -190,16 +212,25 @@ def drill_assistant(m, material_name, drill_diam, depth, output_units, generate_
 
 
 def main(env, form):
+    print('Content-Type: text/html\n')
+
     # What are the Fusion 360 settings for...
 
     machine = env['machine'] if 'machine' in env else None
+    operation = env['operation'] if 'operation' in env else None
     stock_mat = env['stock_mat'] if 'stock_mat' in env else None
     tool_mat = env['tool_mat'] if 'tool_mat' in env else None
     input_units = env['input_units'] if 'input_units' in env else None
     output_units = env['output_units'] if 'output_units' in env else None
 
+    drill_diam = env['drill_diam'] if 'drill_diam' in env else None
+    hole_depth = env['hole_depth'] if 'hole_depth' in env else None
+
     if machine not in ['PM25MV', 'PM25MV_DMMServo', 'PM25MV_HS']:
         machine = None
+
+    if operation not in ['drilling']:
+        operation = None
 
     if stock_mat not in ['aluminum', '6061', 'steel', 'steel-mild', '12l14', 'steel-medium', 'steel-high']:
         stock_mat = None
@@ -213,7 +244,17 @@ def main(env, form):
     if output_units not in ['metric', 'imperial']:
         output_units = None
 
-    if machine is not None and stock_mat is not None and tool_mat is not None and input_units is not None and output_units is not None:
+    try:
+        drill_diam = float(drill_diam)
+    except (TypeError, ValueError):
+        drill_diam = None
+
+    try:
+        hole_depth = float(hole_depth)
+    except (TypeError, ValueError):
+        hole_depth = None
+
+    if machine is not None and stock_mat is not None and tool_mat is not None and input_units is not None and output_units is not None and operation is not None and drill_diam is not None and hole_depth is not None:
         print('<html>')
         drill_assistant_header()
 
@@ -226,13 +267,13 @@ def main(env, form):
         else:
             m = None
         if input_units == 'metric':
-            tool = Q_(6.7, 'mm')
+            tool = Q_(drill_diam, 'mm')
         else:
-            tool = Q_(6.7, 'inch')
+            tool = Q_(drill_diam, 'inch')
         if output_units == 'metric':
-            depth = Q_(0.5, 'mm')
+            depth = Q_(hole_depth, 'mm')
         else:
-            depth = Q_(0.5, 'inch')
+            depth = Q_(hole_depth, 'inch')
         gen_graphs = False
         drill_assistant(m, stock_mat, tool, depth, output_units, gen_graphs)
         print('</html>')
@@ -268,9 +309,32 @@ def application(environ, start_response):
 
 
 if __name__ == "__main__":
-    env = {'machine': 'PM25MV_DMMServo',
-           'stock_mat': 'aluminum',
-           'tool_mat': 'hss',
-           'input_units': 'metric',
-           'output_units': 'imperial'}
-    main(env, [])
+    if False:
+        env = {'machine': 'PM25MV_DMMServo',
+               'stock_mat': 'aluminum',
+               'tool_mat': 'hss',
+               'input_units': 'metric',
+               'output_units': 'imperial'}
+        form = {}
+    elif 0:
+        d = urllib.parse.parse_qs(environ['QUERY_STRING'])
+        env = {k: v[0].strip() for k, v in d.items()}
+
+        request_body = environ['wsgi.input'].read()
+        d = urllib.parse.parse_qs(request_body)
+        form = {k.decode('utf-8'): v[0].decode('utf-8').strip() for k, v in d.items()}
+    else:
+        form = cgi.FieldStorage()
+        env = { 'machine': form.getvalue('machine'),
+                'operation': form.getvalue('operation'),
+                'stock_mat': form.getvalue('stock_mat'),
+                'tool_mat': form.getvalue('tool_mat'),
+                'input_units': form.getvalue('input_units'),
+                'output_units': form.getvalue('output_units'),
+
+                'drill_diam': form.getvalue('drill_diam'),
+                'hole_depth': form.getvalue('hole_depth')}
+
+        #form = {}
+
+    main(env, form)
