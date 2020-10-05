@@ -97,9 +97,9 @@ class MachineType(PyMachiningBase):
         xmin = x[0].magnitude
         xmax = x[-1].magnitude
         if highlight_rpm is not None:
-            xmin = min(xmin, highlight_rpm * 0.9)
+            xmin = min(xmin, highlight_rpm.m * 0.9)
         if highlight_rpm is not None:
-            xmax = max(xmax, highlight_rpm * 1.1)
+            xmax = max(xmax, highlight_rpm.m * 1.1)
         ax1.set_xlim([xmin, xmax])
 
         ax2 = ax1.twinx()
