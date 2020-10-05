@@ -76,7 +76,7 @@ class MachineType(PyMachiningBase):
         # return t * rpm / 9.5488)
         return (t * rpm / self.efficiency).to('watt') + self.idle_power
 
-    def plot_torque_speed_curve(self, highlight_power=None, highlight_torque=None, highlight_rpm=None):
+    def plot_torque_speed_curve(self, highlight_power=None, highlight_torque=None, highlight_rpm=None, embed=False, full_title=True):
         x = np.linspace(self.min_rpm, self.max_rpm / self.gear_ratio, 100)  # * ureg.tpm
         # y1 = np.vectorize(m.torque_continuous)(x)
         # y2 = np.vectorize(m.torque_intermittent)(x)
@@ -87,7 +87,10 @@ class MachineType(PyMachiningBase):
 
         fig, ax1 = pylab.subplots()
 
-        ax1.set_title(self.name + " Torque, Power vs. Speed", fontsize=16.)
+        if full_title:
+            ax1.set_title(self.name + " Torque, Power vs. Speed", fontsize=16.)
+        else:
+            ax1.set_title("Torque, Power vs. Speed", fontsize=16.)
 
         ax1.set_xlabel("Speed [RPM]", fontsize=12)
         ax1.set_ylabel("Torque [N m]", fontsize=12)
@@ -130,7 +133,19 @@ class MachineType(PyMachiningBase):
         ax1.legend(lns, labs, loc='upper left')
 
         fig.tight_layout()
-        pylab.show()
+        if not embed:
+            pylab.show()
+            pylab.close()
+            return None
+        else:
+            import io
+            pylab.show()
+            imgdata = io.BytesIO()
+            pylab.savefig(imgdata, format='png', bbox_inches='tight')
+            imgdata.seek(0)
+            img_str = imgdata.getvalue()
+            pylab.close()
+            return img_str
 
     def clamp_speed(self, rpm):
         adjusted = False
