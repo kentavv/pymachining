@@ -443,7 +443,7 @@ class DrillHSS(Drill):
         return self.feed_rate_(stock_material, 'jobber', fit=fit)
 
     @classmethod
-    def plot_feedrate(cls, stock_material):
+    def plot_feedrate(cls, stock_material, embed=False):
         x = np.linspace(0, 2.5, 100) * ureg.inch
 
         def f(diam, fit):
@@ -460,7 +460,19 @@ class DrillHSS(Drill):
         pylab.plot(x, y1, label='linear regression')
         pylab.plot(x, y2, label='polynomial regression')
         pylab.legend()
-        pylab.show()
+
+        if not embed:
+            pylab.show()
+            return None
+        else:
+            import io
+            pylab.show()
+            imgdata = io.BytesIO()
+            pylab.savefig(imgdata, format='png', bbox_inches='tight')
+            imgdata.seek(0)
+            img_str = imgdata.getvalue()
+            return img_str
+
 
     def thrust(self, stock_material, fit='poly'):
         # Trust numbers from:
@@ -527,7 +539,7 @@ class DrillHSS(Drill):
         return feed_force
 
     @classmethod
-    def plot_thrust(cls, stock_material, highlight=None):
+    def plot_thrust(cls, stock_material, highlight=None, embed=False):
         x = np.linspace(0, 2.5, 100) * ureg.inch
 
         def f(diam, fit):
@@ -554,7 +566,20 @@ class DrillHSS(Drill):
         if highlight is not None:
             pylab.axhline(y=highlight.to('lbs').magnitude, color='#ff3333ee', label='max thrust')
         pylab.legend()
-        pylab.show()
+
+        if not embed:
+            pylab.show()
+            pylab.close()
+            return None
+        else:
+            import io
+            pylab.show()
+            imgdata = io.BytesIO()
+            pylab.savefig(imgdata, format='png', bbox_inches='tight')
+            imgdata.seek(0)
+            img_str = imgdata.getvalue()
+            pylab.close()
+            return img_str
 
 
 class DrillHSSJobber(DrillHSS):
