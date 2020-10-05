@@ -117,20 +117,26 @@ class MachineType(PyMachiningBase):
             lns += ax1.plot(x.magnitude, y2.magnitude, color=colors[2], label='Intermittent T')
             lns += ax2.plot(x.magnitude, (y2 * x / 9.5488).magnitude, color=colors[3], label='Intermittent P')
 
-        if highlight_power is not None:
-            lns += [ax2.axhline(highlight_power.to('watt').magnitude, color=colors[4], label='Requested P')]
+        #if highlight_power is not None:
+        #    lns += [ax2.axhline(highlight_power.to('watt').magnitude, color=colors[4], label='Requested P')]
+#
+#        if highlight_torque is not None:
+#            lns += [ax2.axhline(highlight_rpm.magnitude, color=colors[5], label='Requested T')]
+#
+#        if highlight_rpm is not None:
+#            lns += [ax2.axvline(highlight_rpm.magnitude, color=colors[6], label='Requested RPM')]
 
-        if highlight_torque is not None:
-            lns += [ax2.axhline(highlight_rpm.magnitude, color=colors[5], label='Requested T')]
-
-        if highlight_rpm is not None:
-            lns += [ax2.axvline(highlight_rpm.magnitude, color=colors[6], label='Requested RPM')]
+        if highlight_rpm is not None and highlight_power is not None:
+            ax2.scatter([highlight_rpm.magnitude], [highlight_power.to('watt').magnitude], label='Requested RPM,P')
+            ax2.scatter([highlight_rpm.magnitude*.90], [highlight_power.to('watt').magnitude*.90], label='90% Requested RPM,P')
+            ax2.scatter([highlight_rpm.magnitude*1.10], [highlight_power.to('watt').magnitude*1.10], label='110% Requested RPM,P')
 
         ax1.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
 
         labs = [l.get_label() for l in lns]
         ax1.legend(lns, labs, loc='upper left')
+        ax2.legend(loc='upper right')
 
         fig.tight_layout()
         if not embed:
