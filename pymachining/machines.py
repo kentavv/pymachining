@@ -91,13 +91,19 @@ class MachineType(PyMachiningBase):
 
         ax1.set_xlabel("Speed [RPM]", fontsize=12)
         ax1.set_ylabel("Torque [N m]", fontsize=12)
-        ax1.set_xlim([x[0].magnitude, x[-1].magnitude])
+        xmin = x[0].magnitude
+        xmax = x[-1].magnitude
+        if highlight_rpm is not None:
+            xmin = min(xmin, highlight_rpm * 0.9)
+        if highlight_rpm is not None:
+            xmax = max(xmax, highlight_rpm * 1.1)
+        ax1.set_xlim([xmin, xmax])
 
         ax2 = ax1.twinx()
         ax2.set_ylabel("Power [W]", fontsize=12)
 
-        colors = ['#ff0000ee', '#773300ee', '#00ff00ee', '#005533ee',
-                  '#555533ee', '#22ff22ee', '#ff5533ee']
+        colors = ['#aa0000ee', '#00aa00ee', '#ff0000ee', '#00ff00ee',
+                  '#aaaa00ee', '#aa00aaee', '#00aaaaee']
 
         lns = []
 
