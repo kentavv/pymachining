@@ -183,14 +183,15 @@ class DrillOp(MachiningOp):
         v_c = cutting_speed
         # / 4
         Q = D_c * f_n * v_c / 4
-
         Q *= ureg.turn
-        print(Q)
-        print(Q.check('[length] ** 2 / [time] / turn'))
-        print(Q.check('[length] ** 3 / [time] / turn'))
-        print(Q.check('[volume] / [time] / turn'))
-        print(Q.check('[length] ** 3 / [time]'))
-        print(Q.check('[volume] / [time]'))
+        
+        # print(Q)
+        # print(Q.check('[length] ** 2 / [time] / turn'))
+        # print(Q.check('[length] ** 3 / [time] / turn'))
+        # print(Q.check('[volume] / [time] / turn'))
+        # print(Q.check('[length] ** 3 / [time]'))
+        # print(Q.check('[volume] / [time]'))
+        assert (Q.check('[volume] / [time]'))
 
         return Q  # cm^3 / min
 
