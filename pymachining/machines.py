@@ -109,13 +109,14 @@ class MachineType(PyMachiningBase):
                   '#aaaa00ee', '#aa00aaee', '#00aaaaee']
 
         lns = []
+        lns2 = []
 
         lns += ax1.plot(x.magnitude, y1.magnitude, color=colors[0], label='Continuous T')
-        lns += ax2.plot(x.magnitude, (y1 * x / 9.5488).magnitude, color=colors[1], label='Continuous P')
+        lns2 += ax2.plot(x.magnitude, (y1 * x / 9.5488).magnitude, color=colors[1], label='Continuous P')
 
         if self.torque_intermittent_define:
             lns += ax1.plot(x.magnitude, y2.magnitude, color=colors[2], label='Intermittent T')
-            lns += ax2.plot(x.magnitude, (y2 * x / 9.5488).magnitude, color=colors[3], label='Intermittent P')
+            lns2 += ax2.plot(x.magnitude, (y2 * x / 9.5488).magnitude, color=colors[3], label='Intermittent P')
 
         #if highlight_power is not None:
         #    lns += [ax2.axhline(highlight_power.to('watt').magnitude, color=colors[4], label='Requested P')]
@@ -134,8 +135,10 @@ class MachineType(PyMachiningBase):
         ax1.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
 
-        labs = [l.get_label() for l in lns]
-        ax1.legend(lns, labs, loc='upper left')
+        # labs = [l.get_label() for l in lns]
+        # ax1.legend(lns, labs, loc='upper left')
+        # labs = [l.get_label() for l in lns]
+        ax1.legend(loc='upper left')
         ax2.legend(loc='upper right')
 
         fig.tight_layout()
